@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
+import Script from "next/script";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -32,6 +33,8 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col">
         {children}
         <Analytics />
+        <Script src="https://solvinghealth.com/chat-widget.js" data-channel="surgeonvalue" data-color="#1B2A4A" strategy="lazyOnload" />
+        <Script src="https://solvinghealth.com/voice-embed.js" data-site="surgeonvalue" strategy="lazyOnload" />
       </body>
     </html>
   );
