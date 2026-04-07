@@ -30,9 +30,20 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${geistSans.variable} h-full antialiased`}>
+      <head>
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta name="theme-color" content="#1B2A4A" />
+      </head>
       <body className="min-h-full flex flex-col">
         {children}
         <Analytics />
+        <Script id="sw-register" strategy="afterInteractive">{`
+          if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js');
+          }
+        `}</Script>
         <Script src="https://solvinghealth.com/chat-widget.js" data-channel="surgeonvalue" data-color="#1B2A4A" strategy="lazyOnload" />
         <Script src="https://solvinghealth.com/voice-embed.js" data-site="surgeonvalue" strategy="lazyOnload" />
       </body>

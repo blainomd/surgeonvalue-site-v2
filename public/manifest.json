@@ -1,0 +1,11 @@
+{
+  "name": "SurgeonValue",
+  "short_name": "SurgeonValue",
+  "start_url": "/",
+  "display": "standalone",
+  "theme_color": "#1B2A4A",
+  "background_color": "#FFFFFF",
+  "icons": [
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ]
+}
