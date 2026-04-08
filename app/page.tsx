@@ -473,6 +473,12 @@ export default function Home() {
 
   const agents = [
     {
+      name: "Wonder Bill",
+      description:
+        "\"I wonder if I can bill for this?\" Paste a scenario. Get the CPT code, documentation requirements, and revenue estimate in seconds. Every surgeon's favorite question, finally answered instantly.",
+      icon: <BillingOptimizerIcon className="w-5 h-5" />,
+    },
+    {
       name: "Revenue Scanner",
       description:
         "Scans your full patient panel and identifies every billable code you qualify for but aren't capturing.",
@@ -626,7 +632,7 @@ export default function Home() {
           <div className="text-center">
             <SectionLabel>The Platform</SectionLabel>
             <h2 className="text-3xl md:text-4xl font-bold text-navy mb-4">
-              9 agents. One mission: get you paid.
+              10 agents. One mission: get you paid.
             </h2>
             <p className="text-navy/60 max-w-2xl mx-auto mb-14">
               Each agent handles a specific revenue stream. They work your panel
