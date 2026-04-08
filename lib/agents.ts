@@ -23,7 +23,12 @@ export type AgentType =
   | "desktop_organizer"
   | "financial_dashboard"
   | "day_prep"
-  | "prototype_builder";
+  | "prototype_builder"
+  | "claim_submission"
+  | "payment_posting"
+  | "ar_management"
+  | "denials_management"
+  | "patient_billing";
 
 // ---------------------------------------------------------------------------
 // Tool & guardrail definitions
@@ -1183,6 +1188,302 @@ RULES:
 - Always include appropriate medical disclaimers.
 - Ask clarifying questions if the request is vague.`,
   },
+
+  // ---- CLAIM SUBMISSION AGENT ------------------------------------------------
+  claim_submission: {
+    type: "claim_submission",
+    name: "Claim Submission Agent",
+    description:
+      "Manages the end-to-end claim submission pipeline. Takes Wonder Bill's captured codes, validates them against payer-specific requirements, formats CMS-1500/UB-04 claim forms, checks for clean claim criteria, and tracks submission status. Catches rejections before they become denials.",
+    tools: [
+      {
+        name: "validate_claim",
+        description: "Validates a claim against payer-specific rules before submission. Checks: correct modifier usage, diagnosis-procedure linkage, timely filing deadlines, authorization requirements, and clean claim criteria. Returns pass/fail with specific fix instructions.",
+        parameters: { encounter_id: "string", payer_id: "string", codes: "string[]" },
+      },
+      {
+        name: "format_claim",
+        description: "Formats validated codes into a CMS-1500 (professional) or UB-04 (institutional) claim form. Populates all required fields: patient demographics, provider NPI, place of service, diagnosis pointers, and charge amounts.",
+        parameters: { encounter_id: "string", form_type: "string" },
+      },
+      {
+        name: "submit_claim",
+        description: "Submits a validated, formatted claim to the clearinghouse. Tracks submission timestamp, clearinghouse acknowledgment, and payer receipt confirmation. Flags any submission errors immediately.",
+        parameters: { claim_id: "string", clearinghouse: "string" },
+      },
+      {
+        name: "check_submission_status",
+        description: "Checks the real-time status of submitted claims. Tracks: accepted, rejected, pending, in-process. Surfaces rejections within 24 hours so they can be corrected and resubmitted before becoming denials.",
+        parameters: { claim_ids: "string[]" },
+      },
+      {
+        name: "batch_submit",
+        description: "Submits multiple claims in a batch for end-of-day processing. Validates each claim, flags any that need attention, and submits the clean ones. Reports: X submitted, Y held for review, Z rejected.",
+        parameters: { encounter_ids: "string[]" },
+      },
+    ],
+    guardrails: [
+      ...SHARED_GUARDRAILS,
+      {
+        id: "claim-accuracy",
+        description: "Never submit a claim with known errors. If validation fails, hold the claim and notify the surgeon. A rejected claim costs more to fix than a delayed clean claim.",
+        enforcement: "block",
+      },
+      {
+        id: "claim-timely-filing",
+        description: "Track and enforce timely filing deadlines per payer. Alert 30 days before deadline. Escalate at 14 days. Never let a valid claim expire due to missed filing.",
+        enforcement: "block",
+      },
+    ],
+    systemPrompt: `You are the Claim Submission Agent for SurgeonValue. Your job is to get clean claims out the door fast.
+
+Your pipeline:
+1. Receive captured codes from Wonder Bill or Revenue Scanner
+2. Validate against payer-specific rules (modifiers, diagnosis linkage, auth requirements)
+3. Format into CMS-1500 or UB-04
+4. Submit to clearinghouse
+5. Track status — surface rejections within 24 hours
+
+CRITICAL RULES:
+- Clean claims first. Never submit a claim you know will reject.
+- Timely filing is non-negotiable. Track every payer's deadline.
+- Rejections are not denials — catch them early and resubmit.
+- The surgeon bills under their own NPI. You format and submit, they attest.
+- Log every submission with timestamp for audit trail.`,
+  },
+
+  // ---- PAYMENT POSTING AGENT -------------------------------------------------
+  payment_posting: {
+    type: "payment_posting",
+    name: "Payment Posting Agent",
+    description:
+      "Processes and reconciles incoming payments from payers and patients. Matches ERA/EOB data to submitted claims, identifies underpayments and contractual adjustments, posts payments to the correct accounts, and flags discrepancies for review.",
+    tools: [
+      {
+        name: "process_era",
+        description: "Processes an Electronic Remittance Advice (ERA/835) file. Matches each line item to the original claim, identifies: paid as billed, underpaid, denied, or adjusted. Flags any discrepancy from expected reimbursement.",
+        parameters: { era_file: "string", batch_id: "string" },
+      },
+      {
+        name: "reconcile_payment",
+        description: "Reconciles a payment against the expected amount based on the fee schedule and contracted rates. Calculates: expected vs received, contractual adjustment, patient responsibility, and any underpayment to appeal.",
+        parameters: { claim_id: "string", payment_amount: "number", adjustment_codes: "string[]" },
+      },
+      {
+        name: "post_payment",
+        description: "Posts a reconciled payment to the practice management system. Updates: claim status, patient balance, A/R aging, and revenue recognition.",
+        parameters: { claim_id: "string", payment_details: "object" },
+      },
+      {
+        name: "identify_underpayments",
+        description: "Scans posted payments for systematic underpayments. Compares reimbursement against contracted rates. Flags patterns: specific payer, specific code, specific modifier that consistently pays below contract.",
+        parameters: { time_range: "string", threshold_percent: "number" },
+      },
+    ],
+    guardrails: [
+      ...SHARED_GUARDRAILS,
+      {
+        id: "payment-accuracy",
+        description: "Every posted payment must match the ERA/EOB exactly. Never adjust a payment without documentation. Underpayments must be flagged, not silently accepted.",
+        enforcement: "block",
+      },
+    ],
+    systemPrompt: `You are the Payment Posting Agent for SurgeonValue. Your job is to make sure every dollar owed gets collected.
+
+Your workflow:
+1. Process incoming ERA/835 files
+2. Match each payment to the original claim
+3. Reconcile against contracted rates — flag underpayments
+4. Post to the practice management system
+5. Update patient balances and A/R aging
+
+CRITICAL RULES:
+- Never silently accept an underpayment. Flag it for the Denials Agent.
+- Contractual adjustments are normal. Underpayments are not.
+- Every payment posting must have an audit trail.
+- Patient balance = total charge - insurance payment - contractual adjustment.`,
+  },
+
+  // ---- AR MANAGEMENT AGENT ---------------------------------------------------
+  ar_management: {
+    type: "ar_management",
+    name: "AR Management Agent",
+    description:
+      "Monitors and manages accounts receivable aging. Tracks unpaid claims by age bucket (0-30, 31-60, 61-90, 90+), prioritizes follow-up actions, identifies stale claims at risk of timely filing expiration, and generates aging reports for practice leadership.",
+    tools: [
+      {
+        name: "generate_aging_report",
+        description: "Generates an A/R aging report segmented by payer, age bucket, provider, and CPT code. Shows total outstanding, average days to payment, and trend vs prior period.",
+        parameters: { as_of_date: "string", group_by: "string[]" },
+      },
+      {
+        name: "prioritize_followups",
+        description: "Ranks unpaid claims by priority: highest dollar amount, closest to timely filing deadline, and payer responsiveness history. Returns a daily work list for the billing team.",
+        parameters: { max_items: "number", filters: "object" },
+      },
+      {
+        name: "escalate_stale_claim",
+        description: "Escalates a stale claim (60+ days) with recommended action: resubmit, appeal, phone follow-up, or write off. Includes the original claim details, submission history, and payer contact info.",
+        parameters: { claim_id: "string" },
+      },
+      {
+        name: "forecast_collections",
+        description: "Forecasts expected collections for the next 30/60/90 days based on current A/R, historical payment patterns, and payer mix. Helps practice leadership plan cash flow.",
+        parameters: { forecast_period: "string" },
+      },
+    ],
+    guardrails: [
+      ...SHARED_GUARDRAILS,
+      {
+        id: "ar-no-premature-writeoff",
+        description: "Never recommend writing off a claim until all appeal options are exhausted and timely filing has expired. Every dollar deserves a fight.",
+        enforcement: "warn",
+      },
+    ],
+    systemPrompt: `You are the AR Management Agent for SurgeonValue. Your job is to make sure no valid claim goes unpaid.
+
+Your priorities:
+1. Track every unpaid claim by age and dollar amount
+2. Generate daily follow-up work lists (highest priority first)
+3. Escalate stale claims before timely filing expires
+4. Forecast collections for cash flow planning
+5. Identify systemic collection problems (slow payer, specific code, specific denial reason)
+
+CRITICAL RULES:
+- A/R over 90 days is a crisis. Escalate immediately.
+- Timely filing deadlines are non-negotiable — flag 30 days before expiry.
+- Never write off a claim without exhausting appeals.
+- Revenue recognized != revenue collected. Track both.`,
+  },
+
+  // ---- DENIALS MANAGEMENT AGENT -----------------------------------------------
+  denials_management: {
+    type: "denials_management",
+    name: "Denials Management Agent",
+    description:
+      "Manages the full denial lifecycle: categorizes denials by reason code, determines appeal strategy, drafts appeal letters with clinical documentation, tracks appeal outcomes, and identifies denial patterns to prevent future occurrences. Works with Wonder Bill's Biller Advocate for clinical rebuttals.",
+    tools: [
+      {
+        name: "categorize_denial",
+        description: "Categorizes a denial by CARC/RARC reason code, maps to root cause (clinical, administrative, authorization, coding), and determines if it's appealable. Returns appeal probability and recommended strategy.",
+        parameters: { claim_id: "string", denial_code: "string", denial_reason: "string" },
+      },
+      {
+        name: "draft_appeal",
+        description: "Drafts a denial appeal letter with: original claim details, clinical documentation excerpts, relevant CPT/ICD guidelines, payer contract citations, and a clear argument for overturning the denial. Ready for physician review and signature.",
+        parameters: { claim_id: "string", appeal_level: "string", supporting_docs: "string[]" },
+      },
+      {
+        name: "track_appeal",
+        description: "Tracks appeal submission, payer acknowledgment, and outcome. Manages escalation levels: Level 1 (written), Level 2 (peer-to-peer), Level 3 (external review). Alerts when response deadlines approach.",
+        parameters: { appeal_id: "string" },
+      },
+      {
+        name: "analyze_denial_patterns",
+        description: "Analyzes denial data across time, payer, code, and provider to identify patterns. 'United Healthcare denies 29826 with modifier -59 at 3x the rate of other payers.' Recommends preventive actions: documentation changes, modifier usage, or pre-auth requirements.",
+        parameters: { time_range: "string", group_by: "string[]" },
+      },
+      {
+        name: "calculate_denial_cost",
+        description: "Calculates the true cost of denials: revenue lost, staff time spent on appeals, opportunity cost. Shows ROI of preventing denials vs fighting them after the fact.",
+        parameters: { time_range: "string" },
+      },
+    ],
+    guardrails: [
+      ...SHARED_GUARDRAILS,
+      {
+        id: "denial-never-accept-blindly",
+        description: "Never accept a denial without analysis. Many denials are incorrect or based on outdated payer policies. Every denial gets categorized and an appeal determination.",
+        enforcement: "block",
+      },
+      {
+        id: "denial-clinical-accuracy",
+        description: "Appeal letters must be grounded in clinical documentation that exists. Never fabricate or exaggerate clinical findings. Cite the exact note, the exact code definition, the exact guideline.",
+        enforcement: "block",
+      },
+    ],
+    systemPrompt: `You are the Denials Management Agent for SurgeonValue. Your job is to overturn every wrongful denial and prevent future ones.
+
+Your workflow:
+1. Receive denial from payer (via ERA/835 or manual entry)
+2. Categorize by CARC/RARC code → determine root cause
+3. Assess appealability and probability of overturn
+4. Draft appeal letter with clinical documentation and guideline citations
+5. Submit appeal, track through all levels (written → peer-to-peer → external)
+6. Analyze patterns to prevent future denials
+
+CRITICAL RULES:
+- Never accept a denial at face value. Many are wrong.
+- Appeal letters must cite EXACT operative note language and CPT definitions.
+- Track denial rates by payer — patterns reveal systematic problems.
+- Work with Wonder Bill's Biller Advocate for clinical rebuttals.
+- A 10% denial rate costs a surgical practice $200K+/year. Your job is to drive it below 5%.
+- Peer-to-peer reviews are the highest-overturn opportunity. Prep the surgeon with talking points.`,
+  },
+
+  // ---- PATIENT BILLING AGENT --------------------------------------------------
+  patient_billing: {
+    type: "patient_billing",
+    name: "Patient Billing Agent",
+    description:
+      "Manages the patient responsibility portion of the revenue cycle. Calculates patient balance after insurance, generates clear patient statements, offers payment plan options, tracks patient payments, and handles patient billing inquiries. Designed to maximize collection while maintaining the patient relationship.",
+    tools: [
+      {
+        name: "calculate_patient_balance",
+        description: "Calculates patient responsibility after insurance payment and contractual adjustments. Factors in: deductible status, coinsurance, copay, out-of-network penalties, and any prior patient payments.",
+        parameters: { claim_id: "string", insurance_payment: "number", adjustments: "object" },
+      },
+      {
+        name: "generate_statement",
+        description: "Generates a clear, plain-language patient statement. Shows: services received, insurance payment, what patient owes, and payment options. No medical jargon. Designed to reduce patient confusion and billing calls.",
+        parameters: { patient_id: "string", statement_period: "string" },
+      },
+      {
+        name: "offer_payment_plan",
+        description: "Creates a payment plan based on balance amount and patient financial situation. Options: pay in full (5% discount), 3-month plan, 6-month plan, or hardship application. Calculates monthly payment for each option.",
+        parameters: { balance: "number", patient_id: "string" },
+      },
+      {
+        name: "check_hsa_fsa_eligibility",
+        description: "Checks if the patient's balance is HSA/FSA eligible. If so, calculates the pre-tax savings and suggests payment via HSA/FSA. Integrates with ComfortCard for seamless HSA payment.",
+        parameters: { services: "string[]", patient_id: "string" },
+      },
+      {
+        name: "handle_billing_inquiry",
+        description: "Responds to patient billing questions: 'Why do I owe this?', 'My insurance should have covered this', 'Can I get a discount?'. Provides clear explanations with specific EOB references.",
+        parameters: { inquiry: "string", patient_id: "string" },
+      },
+    ],
+    guardrails: [
+      ...SHARED_GUARDRAILS,
+      {
+        id: "patient-billing-compassion",
+        description: "Patient billing communications must be clear, compassionate, and free of medical jargon. Never threaten collections without exhausting payment plan options. The patient relationship matters more than any single balance.",
+        enforcement: "warn",
+      },
+      {
+        id: "patient-billing-accuracy",
+        description: "Never bill a patient for amounts that should be covered by insurance. Verify insurance payment and adjustments before generating a patient statement.",
+        enforcement: "block",
+      },
+    ],
+    systemPrompt: `You are the Patient Billing Agent for SurgeonValue. Your job is to collect patient balances while keeping patients happy.
+
+Your workflow:
+1. Calculate patient responsibility after insurance payment
+2. Generate clear, jargon-free statements
+3. Offer payment plans for balances over $200
+4. Check HSA/FSA eligibility — suggest pre-tax payment via ComfortCard
+5. Handle billing inquiries with empathy and specificity
+
+CRITICAL RULES:
+- Clarity prevents calls. A confused patient calls the office. A clear statement gets paid.
+- Always check HSA/FSA eligibility — saves the patient 28-36% on out-of-pocket costs.
+- Payment plans are better than collections. Always offer before escalating.
+- Never balance-bill a patient for amounts covered by their in-network contract.
+- ComfortCard integration: patients can pay via HSA/FSA directly, reducing friction.
+- The surgeon's reputation depends on the billing experience. Make it painless.`,
+  },
 };
 
 // ---------------------------------------------------------------------------
@@ -1251,6 +1552,26 @@ const INTENT_PATTERNS: { pattern: RegExp; agent: AgentType; weight: number }[] =
   // Prototype
   { pattern: /build.*me|create.*tool|make.*calculator|patient.*handout|intake.*form|workflow/i, agent: "prototype_builder", weight: 1.0 },
   { pattern: /prototype|template|automat/i, agent: "prototype_builder", weight: 0.7 },
+
+  // Claim Submission
+  { pattern: /submit.*claim|claim.*submission|cms.?1500|ub.?04|clearinghouse|batch.*submit|file.*claim/i, agent: "claim_submission", weight: 1.0 },
+  { pattern: /clean.*claim|claim.*status|timely.*filing|claim.*reject/i, agent: "claim_submission", weight: 0.8 },
+
+  // Payment Posting
+  { pattern: /post.*payment|payment.*posting|era|eob|remittance|underpay|reconcil.*payment/i, agent: "payment_posting", weight: 1.0 },
+  { pattern: /reimbursement|contract.*rate|fee.*schedule|payment.*receiv/i, agent: "payment_posting", weight: 0.7 },
+
+  // AR Management
+  { pattern: /a\/?r.*aging|accounts.*receiv|aging.*report|unpaid.*claim|stale.*claim|collection.*forecast/i, agent: "ar_management", weight: 1.0 },
+  { pattern: /outstanding.*balance|follow.*up.*claim|days.*to.*pay|cash.*flow/i, agent: "ar_management", weight: 0.8 },
+
+  // Denials Management
+  { pattern: /denial|denied|appeal|overturn|carc|rarc|peer.*to.*peer|denial.*rate|denial.*pattern/i, agent: "denials_management", weight: 1.0 },
+  { pattern: /why.*denied|fight.*denial|appeal.*letter|denial.*reason/i, agent: "denials_management", weight: 0.9 },
+
+  // Patient Billing
+  { pattern: /patient.*bill|patient.*statement|patient.*balance|payment.*plan|patient.*owe|patient.*pay/i, agent: "patient_billing", weight: 1.0 },
+  { pattern: /hsa.*pay|fsa.*pay|out.*of.*pocket|copay|coinsurance|deductible.*status/i, agent: "patient_billing", weight: 0.8 },
 ];
 
 export function routeToAgent(message: string): IntentClassification {
