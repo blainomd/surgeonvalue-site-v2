@@ -462,6 +462,97 @@ function EMRBadge({ name }: { name: string }) {
   );
 }
 
+/* ─── Surgeon Finder (NPI) ─── */
+
+interface NPIResult {
+  npi: string; firstName: string; lastName: string; credential: string;
+  specialty: string; city: string; state: string; phone: string;
+}
+
+function SurgeonFinder() {
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<NPIResult[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [searched, setSearched] = useState(false);
+
+  async function search(e: React.FormEvent) {
+    e.preventDefault();
+    if (!query.trim()) return;
+    setLoading(true);
+    setSearched(true);
+    try {
+      const isNPI = /^\d{10}$/.test(query.trim());
+      const param = isNPI ? `npi=${query.trim()}` : `name=${encodeURIComponent(query.trim())}`;
+      const res = await fetch(`/api/npi?${param}`);
+      const data = await res.json();
+      setResults(data.results || []);
+    } catch {
+      setResults([]);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <section id="find-surgeon" className="py-20 px-6 bg-white">
+      <div className="max-w-4xl mx-auto">
+        <div className="text-center mb-8">
+          <SectionLabel>Find Your Surgeon</SectionLabel>
+          <h2 className="text-3xl md:text-4xl font-bold text-navy mb-4">
+            Search by name or NPI
+          </h2>
+          <p className="text-navy/60 max-w-xl mx-auto">
+            Every surgeon in the United States. Real-time from the CMS NPI Registry.
+          </p>
+        </div>
+
+        <form onSubmit={search} className="flex flex-col sm:flex-row gap-3 max-w-xl mx-auto mb-8">
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Surgeon name or 10-digit NPI..."
+            className="flex-1 px-5 py-4 rounded-xl border border-navy/20 bg-white text-navy placeholder:text-navy/40 focus:outline-none focus:ring-2 focus:ring-teal text-lg"
+          />
+          <button
+            type="submit"
+            disabled={loading}
+            className="px-8 py-4 bg-teal text-white font-bold rounded-xl hover:bg-teal/90 transition-all disabled:opacity-50 cursor-pointer text-lg"
+          >
+            {loading ? "Searching..." : "Search"}
+          </button>
+        </form>
+
+        {searched && results.length === 0 && !loading && (
+          <p className="text-center text-navy/40">No surgeons found. Try a different name or NPI.</p>
+        )}
+
+        {results.length > 0 && (
+          <div className="space-y-3 max-w-2xl mx-auto">
+            {results.map((r) => (
+              <div key={r.npi} className="bg-cream rounded-2xl p-5 border border-navy/5 hover:shadow-lg hover:-translate-y-0.5 transition-all">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h3 className="font-bold text-navy text-lg">
+                      {r.firstName} {r.lastName}{r.credential ? `, ${r.credential}` : ""}
+                    </h3>
+                    <p className="text-navy/60 text-sm">{r.specialty}</p>
+                    <p className="text-navy/40 text-xs mt-1">{r.city}, {r.state} &middot; NPI: {r.npi}</p>
+                  </div>
+                  <span className="inline-flex items-center px-3 py-1.5 rounded-lg bg-teal/10 text-teal text-xs font-bold shrink-0">
+                    View Revenue
+                  </span>
+                </div>
+              </div>
+            ))}
+            <p className="text-center text-navy/30 text-xs mt-4">Source: CMS NPPES NPI Registry. Updated in real-time.</p>
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
 /* ─── Wonder Bill Demo ─── */
 
 const WONDER_BILL_EXAMPLES = [
@@ -681,14 +772,17 @@ export default function Home() {
             <span className="font-bold text-xl text-navy">SurgeonValue</span>
           </a>
           <div className="hidden md:flex items-center gap-8 text-sm text-navy/70">
+            <a href="#find-surgeon" className="hover:text-teal transition-colors">
+              Find Surgeon
+            </a>
+            <a href="#wonder-bill" className="hover:text-teal transition-colors">
+              Wonder Bill
+            </a>
             <a href="#agents" className="hover:text-teal transition-colors">
               Agents
             </a>
             <a href="#pricing" className="hover:text-teal transition-colors">
               Pricing
-            </a>
-            <a href="#calculator" className="hover:text-teal transition-colors">
-              Calculator
             </a>
             <a
               href="#hero"
@@ -724,6 +818,9 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {/* ─── Surgeon Finder ─── */}
+      <SurgeonFinder />
 
       {/* ─── The Problem ─── */}
       <section className="py-20 px-6 bg-white">
