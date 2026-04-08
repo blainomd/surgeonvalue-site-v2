@@ -816,7 +816,7 @@ export default function Home() {
             </div>
           </div>
           <a
-            href="https://clinicalswipe.com"
+            href="https://www.solvinghealth.com"
             target="_blank"
             rel="noopener noreferrer"
             className="inline-block mt-10 px-6 py-3 border border-teal text-teal rounded-xl font-semibold hover:bg-teal/10 transition-all duration-300"
@@ -890,7 +890,7 @@ export default function Home() {
             />
           </div>
           <a
-            href="https://themissedcode.com"
+            href="https://www.surgeonvalue.com"
             target="_blank"
             rel="noopener noreferrer"
             className="text-teal hover:underline text-sm font-semibold"
@@ -914,7 +914,7 @@ export default function Home() {
             <pre className="text-sm text-navy overflow-x-auto whitespace-pre font-mono leading-relaxed">{`"surgeonvalue": {
   "command": "npx",
   "args": ["-y", "@anthropic-ai/mcp-remote",
-    "https://solvinghealth.com/mcp"]
+    "https://www.solvinghealth.com/mcp"]
 }`}</pre>
           </div>
           <p className="text-muted text-sm">
@@ -935,7 +935,7 @@ export default function Home() {
             </div>
             <div className="flex flex-wrap justify-center gap-6 text-sm">
               <a
-                href="https://solvinghealth.com"
+                href="https://www.solvinghealth.com"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="hover:text-white transition-colors"
@@ -943,7 +943,7 @@ export default function Home() {
                 SolvingHealth
               </a>
               <a
-                href="https://clinicalswipe.com"
+                href="https://www.solvinghealth.com"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="hover:text-white transition-colors"
@@ -951,7 +951,7 @@ export default function Home() {
                 ClinicalSwipe
               </a>
               <a
-                href="https://co-op.care"
+                href="https://www.co-op.care"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="hover:text-white transition-colors"
@@ -959,7 +959,7 @@ export default function Home() {
                 co-op.care
               </a>
               <a
-                href="https://themissedcode.com"
+                href="https://www.surgeonvalue.com"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="hover:text-white transition-colors"
