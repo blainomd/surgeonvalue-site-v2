@@ -927,7 +927,7 @@ export default function Home() {
             <StepCard
               step={2}
               title="AI Scans Panel"
-              description="9 agents analyze your full patient panel and surface every missed code."
+              description="10 agents analyze your full patient panel and surface every missed code."
               icon={<ScanIcon className="w-7 h-7" />}
             />
             <StepCard
@@ -1009,10 +1009,10 @@ export default function Home() {
             <PricingCard
               name="Pro"
               price="$299/mo"
-              description="All 9 agents + priority"
+              description="All 10 agents + priority"
               highlighted
               features={[
-                "All 9 agents active",
+                "All 10 agents active",
                 "EMR integration",
                 "Real-time revenue dashboard",
                 "ClinicalSwipe attestation",
@@ -1126,31 +1126,23 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ─── Newsletter ─── */}
-      <section className="py-20 px-6 bg-white">
+      {/* ─── Get Started ─── */}
+      <section className="py-20 px-6 bg-gradient-to-br from-teal to-teal/80 text-white">
         <div className="max-w-3xl mx-auto text-center">
-          <SectionLabel>Newsletter</SectionLabel>
-          <h2 className="text-3xl md:text-4xl font-bold text-navy mb-4">
-            The Missed Code
+          <h2 className="text-3xl md:text-4xl font-bold mb-4">
+            Get Your Free Panel Scan
           </h2>
-          <p className="text-navy/70 text-lg mb-8">
-            Get the codes surgeons don&apos;t bill. Every Tuesday.
+          <p className="text-white/80 text-lg mb-8 max-w-xl mx-auto">
+            See exactly how much revenue your practice is missing. Free tier available indefinitely. Upgrade only when the math makes sense for you.
           </p>
-          <div className="flex justify-center mb-6">
-            <EmailCapture
-              source="newsletter"
-              cta="Subscribe"
-              placeholder="you@practice.com"
-            />
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <a href="#find-surgeon" className="px-8 py-4 bg-white text-teal font-bold text-lg rounded-xl hover:bg-white/90 transition-all hover:scale-105">
+              Find Your Practice
+            </a>
+            <a href="#connector" className="px-8 py-4 bg-white/10 border-2 border-white/30 text-white font-bold text-lg rounded-xl hover:bg-white/20 transition-all">
+              Install the Connector
+            </a>
           </div>
-          <a
-            href="https://www.surgeonvalue.com"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-teal hover:underline text-sm font-semibold"
-          >
-            Visit themissedcode.com
-          </a>
         </div>
       </section>
 
