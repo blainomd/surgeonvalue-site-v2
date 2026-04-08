@@ -1072,12 +1072,12 @@ export default function Home() {
             See exactly how much revenue your practice is missing. Free tier available indefinitely. Upgrade only when the math makes sense for you.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <a href="#find-surgeon" className="px-8 py-4 bg-white text-teal font-bold text-lg rounded-xl hover:bg-white/90 transition-all hover:scale-105">
+            <button onClick={() => document.getElementById('find-surgeon')?.scrollIntoView({ behavior: 'smooth', block: 'start' })} className="px-8 py-4 bg-white text-teal font-bold text-lg rounded-xl hover:bg-white/90 transition-all hover:scale-105 cursor-pointer">
               Find Your Practice
-            </a>
-            <a href="#connector" className="px-8 py-4 bg-white/10 border-2 border-white/30 text-white font-bold text-lg rounded-xl hover:bg-white/20 transition-all">
+            </button>
+            <button onClick={() => document.getElementById('connector')?.scrollIntoView({ behavior: 'smooth', block: 'start' })} className="px-8 py-4 bg-white/10 border-2 border-white/30 text-white font-bold text-lg rounded-xl hover:bg-white/20 transition-all cursor-pointer">
               Install the Connector
-            </a>
+            </button>
           </div>
         </div>
       </section>
