@@ -546,14 +546,33 @@ function WonderBillDemo() {
     <section id="wonder-bill" className="py-20 px-6 bg-navy text-white">
       <div className="max-w-5xl mx-auto">
         <div className="text-center mb-12">
-          <p className="text-xs uppercase tracking-[0.3em] text-teal-400 font-semibold mb-4">Agent #2</p>
+          <p className="text-xs uppercase tracking-[0.3em] text-teal-400 font-semibold mb-4">The Revenue Pipeline</p>
           <h2 className="text-3xl md:text-4xl font-bold mb-4">
             Wonder Bill
           </h2>
           <p className="text-white/60 max-w-xl mx-auto text-lg">
-            &quot;I wonder if I can bill for this.&quot; Paste a clinical scenario. Get every billable code in seconds.
+            From op note to bank account. Five stages. Zero revenue left behind.
           </p>
         </div>
+
+        {/* 5-Stage Pipeline */}
+        <div className="grid sm:grid-cols-5 gap-3 mb-12">
+          {[
+            { num: "1", name: "Op Note Optimizer", desc: "Paste your note. AI finds unbundled codes you didn't document." },
+            { num: "2", name: "Voice-to-Bill", desc: "Talk after surgery. AI translates to CPT codes automatically." },
+            { num: "3", name: "Biller Advocate", desc: "AI fights your biller when they push back. Cites your note." },
+            { num: "4", name: "Discrepancy Dashboard", desc: "What AI says vs. what biller submitted. Red lines = lost money." },
+            { num: "5", name: "EMR Suggester", desc: "In clinic: 'Add this phrase to bill 99214 instead of 99213.'" },
+          ].map((stage) => (
+            <div key={stage.num} className="bg-white/5 rounded-xl p-4 border border-white/10 text-center">
+              <div className="w-8 h-8 rounded-full bg-teal/20 text-teal font-bold text-sm flex items-center justify-center mx-auto mb-2">{stage.num}</div>
+              <h3 className="font-bold text-sm text-white mb-1">{stage.name}</h3>
+              <p className="text-white/40 text-xs leading-relaxed">{stage.desc}</p>
+            </div>
+          ))}
+        </div>
+
+        <p className="text-center text-white/30 text-xs mb-8">Try it below — click a scenario to see Stage 1 in action</p>
 
         {/* Example scenarios */}
         <div className="grid sm:grid-cols-3 gap-4 mb-8">
