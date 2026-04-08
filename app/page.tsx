@@ -462,6 +462,149 @@ function EMRBadge({ name }: { name: string }) {
   );
 }
 
+/* ─── Wonder Bill Demo ─── */
+
+const WONDER_BILL_EXAMPLES = [
+  {
+    scenario: "45-min office visit, 72-year-old diabetic, bilateral knee OA, steroid injection right knee, ordered PT",
+    codes: [
+      { code: "99214", desc: "Office visit, moderate complexity", revenue: "$128" },
+      { code: "20610", desc: "Arthrocentesis, major joint (injection)", revenue: "$108" },
+      { code: "99490", desc: "CCM — chronic care mgmt (diabetes + OA)", revenue: "$64/mo" },
+      { code: "98980", desc: "RTM — remote therapeutic monitoring setup", revenue: "$21" },
+      { code: "98981", desc: "RTM — device supply, 16+ days", revenue: "$56/mo" },
+      { code: "97110", desc: "PT eval referral coordination", revenue: "$42" },
+    ],
+    total: "$419 + $120/mo recurring",
+    missed: "$1,440/yr from CCM + RTM alone",
+  },
+  {
+    scenario: "Post-op follow-up, total hip replacement, 8 weeks out, doing well, cleared for full activity",
+    codes: [
+      { code: "99213", desc: "Office visit, low complexity (post-op)", revenue: "$92" },
+      { code: "98980", desc: "RTM setup — remote monitoring post-THR", revenue: "$21" },
+      { code: "98981", desc: "RTM supply — wearable tracking", revenue: "$56/mo" },
+      { code: "98977", desc: "RTM treatment mgmt — PT adherence", revenue: "$51/mo" },
+      { code: "71060", desc: "PROM collection (HOOS/WOMAC)", revenue: "$18" },
+    ],
+    total: "$131 + $107/mo recurring",
+    missed: "$1,284/yr in RTM revenue per patient",
+  },
+  {
+    scenario: "New patient, shoulder pain 3 months, MRI shows rotator cuff tear, discussing surgical vs conservative",
+    codes: [
+      { code: "99204", desc: "New patient, moderate complexity", revenue: "$198" },
+      { code: "99497", desc: "ACP — advance care planning discussion", revenue: "$92" },
+      { code: "20610", desc: "Diagnostic injection (if performed)", revenue: "$108" },
+      { code: "99490", desc: "CCM — if comorbidities present", revenue: "$64/mo" },
+      { code: "96127", desc: "Brief emotional screening (surgical anxiety)", revenue: "$12" },
+    ],
+    total: "$410 + $64/mo if CCM eligible",
+    missed: "$768/yr from CCM on comorbid patients",
+  },
+];
+
+function WonderBillDemo() {
+  const [selectedExample, setSelectedExample] = useState<number | null>(null);
+  const [customScenario, setCustomScenario] = useState("");
+  const [showResult, setShowResult] = useState(false);
+
+  function handleTryIt(index: number) {
+    setSelectedExample(index);
+    setShowResult(false);
+    setTimeout(() => setShowResult(true), 800);
+  }
+
+  return (
+    <section id="wonder-bill" className="py-20 px-6 bg-navy text-white">
+      <div className="max-w-5xl mx-auto">
+        <div className="text-center mb-12">
+          <p className="text-xs uppercase tracking-[0.3em] text-teal-400 font-semibold mb-4">Agent #2</p>
+          <h2 className="text-3xl md:text-4xl font-bold mb-4">
+            Wonder Bill
+          </h2>
+          <p className="text-white/60 max-w-xl mx-auto text-lg">
+            &quot;I wonder if I can bill for this.&quot; Paste a clinical scenario. Get every billable code in seconds.
+          </p>
+        </div>
+
+        {/* Example scenarios */}
+        <div className="grid sm:grid-cols-3 gap-4 mb-8">
+          {WONDER_BILL_EXAMPLES.map((ex, i) => (
+            <button
+              key={i}
+              onClick={() => handleTryIt(i)}
+              className={`text-left p-5 rounded-2xl border transition-all cursor-pointer ${
+                selectedExample === i
+                  ? "border-teal bg-teal/10"
+                  : "border-white/10 bg-white/5 hover:border-white/30"
+              }`}
+            >
+              <p className="text-xs text-teal-400 font-semibold mb-2">Example {i + 1}</p>
+              <p className="text-sm text-white/80 leading-relaxed">{ex.scenario}</p>
+            </button>
+          ))}
+        </div>
+
+        {/* Result */}
+        {selectedExample !== null && (
+          <div className="rounded-2xl border border-teal/30 overflow-hidden">
+            <div className="bg-teal/10 px-6 py-4 border-b border-teal/20">
+              <div className="flex items-center gap-3">
+                <BillingOptimizerIcon className="w-5 h-5 text-teal-400" />
+                <span className="font-bold text-teal-400">Wonder Bill</span>
+                {!showResult && (
+                  <div className="flex gap-1.5 ml-2">
+                    <div className="w-2 h-2 rounded-full bg-teal-400 animate-bounce" style={{ animationDelay: "0ms" }} />
+                    <div className="w-2 h-2 rounded-full bg-teal-400 animate-bounce" style={{ animationDelay: "150ms" }} />
+                    <div className="w-2 h-2 rounded-full bg-teal-400 animate-bounce" style={{ animationDelay: "300ms" }} />
+                  </div>
+                )}
+              </div>
+            </div>
+            {showResult && (
+              <div className="p-6">
+                <p className="text-xs text-white/40 uppercase tracking-wider mb-4">Billable codes identified</p>
+                <div className="space-y-3 mb-6">
+                  {WONDER_BILL_EXAMPLES[selectedExample].codes.map((c, i) => (
+                    <div key={i} className="flex items-center justify-between bg-white/5 rounded-xl px-4 py-3">
+                      <div className="flex items-center gap-3">
+                        <span className="font-mono text-teal-400 font-bold text-sm">{c.code}</span>
+                        <span className="text-sm text-white/70">{c.desc}</span>
+                      </div>
+                      <span className="font-mono font-bold text-white">{c.revenue}</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="border-t border-white/10 pt-4 grid sm:grid-cols-2 gap-4">
+                  <div className="bg-teal/10 rounded-xl p-4">
+                    <p className="text-xs text-teal-400 font-semibold uppercase tracking-wider mb-1">This encounter</p>
+                    <p className="text-xl font-bold text-white">{WONDER_BILL_EXAMPLES[selectedExample].total}</p>
+                  </div>
+                  <div className="bg-red-500/10 rounded-xl p-4">
+                    <p className="text-xs text-red-400 font-semibold uppercase tracking-wider mb-1">What you&apos;re missing</p>
+                    <p className="text-xl font-bold text-red-400">{WONDER_BILL_EXAMPLES[selectedExample].missed}</p>
+                  </div>
+                </div>
+                <p className="text-xs text-white/30 mt-4 text-center">This is a demo. In Claude Desktop with the SurgeonValue connector, Wonder Bill analyzes YOUR real encounters.</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Or type your own */}
+        <div className="mt-8 text-center">
+          <p className="text-white/40 text-sm mb-3">Or try it live in Claude Desktop:</p>
+          <div className="bg-white/5 rounded-xl p-4 max-w-lg mx-auto border border-white/10">
+            <p className="font-mono text-sm text-teal-400">&quot;I just did [your scenario]. What can I bill for this?&quot;</p>
+          </div>
+          <p className="text-white/30 text-xs mt-3">The SurgeonValue MCP connector is already installed. Just ask Claude.</p>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 /* ─── Main Page ─── */
 export default function Home() {
   const featuredAgent = {
@@ -567,12 +710,17 @@ export default function Home() {
             $240,000 on the table.
           </h1>
           <p className="text-xl text-navy/70 max-w-2xl mx-auto mb-10 leading-relaxed">
-            SurgeonValue finds the CPT codes you qualify for but don&apos;t bill. 9
+            SurgeonValue finds the CPT codes you qualify for but don&apos;t bill. 10
             AI agents scan your panel, a physician attests, and you get paid.{" "}
-            <span className="font-semibold text-navy">$299/month.</span>
+            <span className="font-semibold text-navy">$20 per encounter. Only when you bill.</span>
           </p>
-          <div className="flex justify-center">
-            <EmailCapture source="hero" />
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <a href="#agents" className="px-8 py-4 bg-teal text-white font-bold text-lg rounded-xl hover:bg-teal/90 hover:shadow-lg transition-all duration-300 hover:scale-105">
+              See the 10 agents
+            </a>
+            <a href="#wonder-bill" className="px-8 py-4 bg-navy text-white font-bold text-lg rounded-xl hover:bg-navy/90 hover:shadow-lg transition-all duration-300 hover:scale-105">
+              Try Wonder Bill
+            </a>
           </div>
         </div>
       </section>
@@ -659,6 +807,9 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {/* ─── Wonder Bill Demo ─── */}
+      <WonderBillDemo />
 
       {/* ─── How It Works ─── */}
       <section className="py-20 px-6 bg-white">
