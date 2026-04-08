@@ -1564,10 +1564,12 @@ const INTENT_PATTERNS: { pattern: RegExp; agent: AgentType; weight: number }[] =
   // AR Management
   { pattern: /a\/?r.*aging|accounts.*receiv|aging.*report|unpaid.*claim|stale.*claim|collection.*forecast/i, agent: "ar_management", weight: 1.0 },
   { pattern: /outstanding.*balance|follow.*up.*claim|days.*to.*pay|cash.*flow/i, agent: "ar_management", weight: 0.8 },
+  { pattern: /over.*\d+.*days|aging|receivable/i, agent: "ar_management", weight: 0.9 },
 
   // Denials Management
   { pattern: /denial|denied|appeal|overturn|carc|rarc|peer.*to.*peer|denial.*rate|denial.*pattern/i, agent: "denials_management", weight: 1.0 },
   { pattern: /why.*denied|fight.*denial|appeal.*letter|denial.*reason/i, agent: "denials_management", weight: 0.9 },
+  { pattern: /denied.*claim|claim.*denied|draft.*appeal|write.*appeal/i, agent: "denials_management", weight: 1.0 },
 
   // Patient Billing
   { pattern: /patient.*bill|patient.*statement|patient.*balance|payment.*plan|patient.*owe|patient.*pay/i, agent: "patient_billing", weight: 1.0 },
