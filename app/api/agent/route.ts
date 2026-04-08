@@ -42,25 +42,45 @@ function executePlaceholder(
     orchestrator:
       "I've analyzed your request and determined the best specialist agent to help. Let me route this for you.",
     prior_auth:
-      "I'll generate a peer-to-peer-ready prior authorization letter from your clinical note. Paste the note and I'll extract codes, cite guidelines, and address common denial patterns — all in under 60 seconds. The letter will require your review and signature before submission.",
+      "I'll generate a peer-to-peer-ready prior authorization letter from your clinical note. Paste the note and I'll extract codes, cite guidelines, and address common denial patterns — all in under 60 seconds.",
     billing:
-      "I'll scan your encounter documentation for missed billing codes and revenue opportunities. I check for under-coded visits, stackable codes (RTM, CCM, TCM), and missing modifiers. All recommendations are audit-defensible and AKS compliant.",
+      "I'll scan your encounter documentation for missed billing codes and revenue opportunities. I check for under-coded visits, stackable codes (RTM, CCM, TCM), and missing modifiers.",
+    wonder_bill:
+      "I'll run your operative note through the 5-stage Wonder Bill pipeline: optimize the note for unbundled codes, translate to CPT, fight any biller pushback, compare against what was actually submitted, and suggest E/M level upgrades.",
     acquisition:
-      "I'll optimize your virtual front door — your surgeon-owned profile that drives patient acquisition. I can improve search visibility, manage reviews, and track your patient pipeline from first click to completed encounter.",
+      "I'll optimize your virtual front door — your surgeon-owned profile that drives patient acquisition.",
     referral:
-      "I'll map your referral network and identify patterns. I can generate clinical updates for referring PCPs, track volume trends, and identify new referral opportunities in your service area. All communications are clinical, never marketing.",
+      "I'll map your referral network and identify patterns. Clinical updates for referring PCPs, volume trends, and new referral opportunities.",
     documentation:
-      "I'll help you create billing-optimized clinical notes. Whether from dictation, ambient capture, or structured input, I ensure all required elements are present for your target billing code. Scope Health integration available with 36 templates.",
+      "I'll help you create billing-optimized clinical notes. I ensure all required elements are present for your target billing code.",
     scheduling:
-      "I'll optimize your OR schedule and clinic flow. I predict no-shows, suggest strategic overbooking, and balance case complexity across blocks. Patient safety always comes first.",
+      "I'll optimize your OR schedule and clinic flow. Patient safety always comes first.",
     rtm_ccm:
-      "I'll scan your patient panel for RTM and CCM eligibility. 96% of CCM-eligible patients are not enrolled — that's $20-60/patient/month in recurring revenue. I handle enrollment docs, compliance tracking, and PCP coordination.",
+      "I'll scan your patient panel for RTM and CCM eligibility. 96% of CCM-eligible patients are not enrolled — that's $20-60/patient/month in recurring revenue.",
     peer_review:
-      "I'll submit your case to the ClinicalSwipe marketplace for peer review. Cases are fully de-identified before submission, and I'll match you with qualified reviewers who have no conflicts of interest.",
+      "I'll submit your case to the ClinicalSwipe marketplace for peer review. Cases are fully de-identified before submission.",
     market_intel:
-      "I'll provide competitive intelligence for your service area — market share estimates, competitor activity, payer mix shifts, and procedure trend forecasts. All from legitimate, publicly available data sources.",
+      "I'll provide competitive intelligence for your service area — market share, competitor activity, payer mix shifts.",
     analytics:
-      "I'll generate your practice dashboard with actionable insights. Revenue trends, denial analysis, per-encounter value, and A/R aging — each metric paired with a specific recommendation for improvement.",
+      "I'll generate your practice dashboard with actionable insights. Revenue trends, denial analysis, per-encounter value, and A/R aging.",
+    desktop_organizer:
+      "I'll organize your practice files — op notes, billing documents, research papers. I sort into structured folders by type and date. I never delete anything.",
+    financial_dashboard:
+      "I'll build a revenue dashboard with payer mix, expense analysis, and a presentation-ready summary for your partner meeting.",
+    day_prep:
+      "Here's your morning briefing: today's OR cases with billing opportunities, clinic patients with E/M suggestions, pending prior auths, and yesterday's Wonder Bill discrepancies.",
+    prototype_builder:
+      "Tell me what you need — a calculator, patient handout, intake form, or workflow automation — and I'll build it for you in minutes.",
+    claim_submission:
+      "I'll validate your claims against payer rules, format them as CMS-1500 or UB-04, submit to the clearinghouse, and track until acceptance. No claim leaves here unless it's clean.",
+    payment_posting:
+      "I'll process your ERA/835 files, match payments to claims, reconcile against contracted rates, and flag any underpayments. Every dollar owed gets tracked.",
+    ar_management:
+      "I'll generate your A/R aging report and prioritize follow-ups by dollar amount and filing deadline. No valid claim goes unpaid on my watch.",
+    denials_management:
+      "I'll categorize the denial, determine if it's appealable, draft the appeal letter citing your operative note and CPT guidelines, and track it through all levels. Many denials are wrong — I fight them.",
+    patient_billing:
+      "I'll calculate patient responsibility, generate a clear statement, offer payment plans, and check HSA/FSA eligibility via ComfortCard. Clear billing = paid bills.",
   };
 
   return {
