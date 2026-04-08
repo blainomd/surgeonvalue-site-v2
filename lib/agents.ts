@@ -19,7 +19,11 @@ export type AgentType =
   | "rtm_ccm"
   | "peer_review"
   | "market_intel"
-  | "analytics";
+  | "analytics"
+  | "desktop_organizer"
+  | "financial_dashboard"
+  | "day_prep"
+  | "prototype_builder";
 
 // ---------------------------------------------------------------------------
 // Tool & guardrail definitions
@@ -996,6 +1000,189 @@ CRITICAL RULES:
 - Every insight must be actionable: "Your denial rate for 27447 increased 12% — the Prior Auth Agent can help"
 - Revenue projections use conservative assumptions. Show ranges, not single numbers`,
   },
+
+  // ---- DESKTOP ORGANIZER AGENT -----------------------------------------------
+  desktop_organizer: {
+    type: "desktop_organizer",
+    name: "Practice File Organizer",
+    description:
+      "Organizes the surgeon's digital workspace. Sorts op notes, patient files, billing documents, and research papers into structured folders. Cleans up downloads, screenshots, and desktop clutter. Never deletes — only moves and organizes.",
+    tools: [
+      {
+        name: "organize_files",
+        description:
+          "Scans a directory (Desktop, Downloads, Documents) and organizes files into structured folders by type: Op Notes, Billing, Patient Files, Research, Admin. Creates date-stamped folders. NEVER deletes any file.",
+        parameters: { directory: "string", dry_run: "boolean" },
+      },
+      {
+        name: "find_document",
+        description:
+          "Searches across all organized folders for a specific document by name, date, patient, or procedure type. Returns the file path and a preview.",
+        parameters: { query: "string", file_type: "string | undefined" },
+      },
+    ],
+    guardrails: [
+      ...SHARED_GUARDRAILS,
+      {
+        id: "org-never-delete",
+        description: "NEVER delete any file. Only move, copy, and organize. Always show the surgeon what will be moved before doing it (dry_run first).",
+        enforcement: "block",
+      },
+    ],
+    systemPrompt: `You are the Practice File Organizer for SurgeonValue. You help surgeons keep their digital workspace clean and organized.
+
+RULES:
+- NEVER delete any file. Only move and organize.
+- Always do a dry run first and show the surgeon what will change.
+- Organize by: Op Notes/, Billing/, Patient Files/, Research/, Admin/, Screenshots/
+- Use date-stamped subfolders (2026-04/, 2026-03/)
+- If a file could go in multiple folders, ask the surgeon.`,
+  },
+
+  // ---- FINANCIAL DASHBOARD AGENT ---------------------------------------------
+  financial_dashboard: {
+    type: "financial_dashboard",
+    name: "Financial Dashboard",
+    description:
+      "Connects to practice financial data and creates custom dashboards showing revenue trends, expense analysis, payer mix, and savings opportunities. Generates presentation-ready reports.",
+    tools: [
+      {
+        name: "build_revenue_dashboard",
+        description:
+          "Creates an interactive HTML dashboard with revenue by payer, procedure volume trends, collection rates, and A/R aging. Includes charts and exportable data.",
+        parameters: { time_range: "string", compare_to: "string | undefined" },
+      },
+      {
+        name: "identify_savings",
+        description:
+          "Analyzes practice expenses and identifies cost reduction opportunities. Compares supply costs, staffing ratios, and overhead against specialty benchmarks.",
+        parameters: { expense_categories: "string[]" },
+      },
+      {
+        name: "generate_presentation",
+        description:
+          "Creates a PowerPoint-ready practice performance summary with key metrics, trends, and recommendations. Designed for partner meetings, bank reviews, and strategic planning.",
+        parameters: { audience: "string", metrics: "string[]" },
+      },
+    ],
+    guardrails: [
+      ...SHARED_GUARDRAILS,
+      {
+        id: "fin-no-phi",
+        description: "Financial dashboards never include individual patient names or PHI. Aggregate data only.",
+        enforcement: "block",
+      },
+    ],
+    systemPrompt: `You are the Financial Dashboard agent for SurgeonValue. You help surgeons understand their practice finances and find revenue opportunities.
+
+Your capabilities:
+1. Revenue dashboards with payer mix, volume trends, collection rates
+2. Expense analysis against specialty benchmarks
+3. Savings opportunity identification
+4. Presentation generation for meetings and reviews
+
+CRITICAL: Never include patient PHI in financial reports. Aggregate only.`,
+  },
+
+  // ---- DAY PREP AGENT --------------------------------------------------------
+  day_prep: {
+    type: "day_prep",
+    name: "Day Prep",
+    description:
+      "Morning briefing for the surgeon. Reviews today's OR schedule, clinic patients, pending prior auths, expiring RTM windows, billing discrepancies from yesterday, and any urgent items. Delivered at 6am or on demand.",
+    tools: [
+      {
+        name: "morning_briefing",
+        description:
+          "Generates the surgeon's daily briefing: OR cases with key details, clinic patients with billing opportunities, pending prior auths, RTM/CCM touchpoints due, and Wonder Bill discrepancies from yesterday.",
+        parameters: { date: "string | undefined" },
+      },
+      {
+        name: "check_calendar",
+        description:
+          "Reviews the surgeon's calendar for today and tomorrow. Flags conflicts, prep needs for complex cases, and available slots for add-on procedures.",
+        parameters: { date_range: "string" },
+      },
+      {
+        name: "prep_case",
+        description:
+          "Generates a pre-op briefing for a specific case: patient history summary, planned procedure, billing codes to capture, relevant implant/device information, and any prior auth status.",
+        parameters: { patient_id: "string", procedure: "string" },
+      },
+    ],
+    guardrails: [
+      ...SHARED_GUARDRAILS,
+      {
+        id: "prep-actionable",
+        description: "Every briefing item must be actionable. Don't just list — tell the surgeon what to DO about it. 'Patient X has an expiring RTM window — document today or lose $56/mo.'",
+        enforcement: "warn",
+      },
+    ],
+    systemPrompt: `You are the Day Prep agent for SurgeonValue. You prepare the surgeon for their day so nothing falls through the cracks.
+
+Morning briefing includes:
+1. OR schedule with billing opportunities per case
+2. Clinic patients with E/M level suggestions
+3. Pending prior auths (approaching deadlines)
+4. RTM/CCM touchpoints due today
+5. Wonder Bill discrepancies from yesterday
+6. Any urgent items requiring attention
+
+RULES:
+- Be concise. Surgeons read this in 2 minutes between coffee and OR.
+- Every item must be actionable: what to do, by when, what it's worth.
+- Flag the highest-value items first.
+- Include revenue at risk for time-sensitive items.`,
+  },
+
+  // ---- PROTOTYPE BUILDER AGENT -----------------------------------------------
+  prototype_builder: {
+    type: "prototype_builder",
+    name: "Prototype Builder",
+    description:
+      "Builds quick prototypes, tools, and dashboards for the practice. Creates custom calculators, patient education materials, intake forms, and workflow automations. The surgeon describes what they need, the agent builds it.",
+    tools: [
+      {
+        name: "build_calculator",
+        description:
+          "Creates a custom HTML calculator tool. Examples: surgical cost estimator, BMI calculator with surgical risk, expected recovery timeline calculator, insurance coverage checker.",
+        parameters: { calculator_type: "string", inputs: "string[]", outputs: "string[]" },
+      },
+      {
+        name: "build_patient_handout",
+        description:
+          "Generates a printable patient education handout for a specific procedure or condition. Includes pre-op instructions, what to expect, recovery timeline, and when to call the office.",
+        parameters: { procedure: "string", reading_level: "string | undefined" },
+      },
+      {
+        name: "build_workflow",
+        description:
+          "Creates a step-by-step workflow automation for a practice process. Examples: new patient intake, prior auth submission, post-op follow-up scheduling, RTM enrollment.",
+        parameters: { process_name: "string", steps: "string[]" },
+      },
+    ],
+    guardrails: [
+      ...SHARED_GUARDRAILS,
+      {
+        id: "proto-patient-safe",
+        description: "Patient-facing materials must include appropriate disclaimers and 'call your surgeon if' warnings. Never provide specific medical advice in generated handouts.",
+        enforcement: "block",
+      },
+    ],
+    systemPrompt: `You are the Prototype Builder for SurgeonValue. You build custom tools for surgical practices.
+
+When a surgeon says "I need a ___", you build it:
+- Calculators (cost estimators, risk calculators, recovery timelines)
+- Patient handouts (procedure-specific, plain language, printable)
+- Workflow automations (intake, prior auth, follow-up)
+- Custom dashboards (any data the surgeon wants to track)
+
+RULES:
+- Build fast. Show a working prototype in minutes, not days.
+- Patient-facing materials must be at 6th grade reading level.
+- Always include appropriate medical disclaimers.
+- Ask clarifying questions if the request is vague.`,
+  },
 };
 
 // ---------------------------------------------------------------------------
@@ -1048,6 +1235,22 @@ const INTENT_PATTERNS: { pattern: RegExp; agent: AgentType; weight: number }[] =
   // Analytics
   { pattern: /analytics|dashboard|revenue.*trend|denial.*rate|a\/?r.*aging|collection.*rate/i, agent: "analytics", weight: 1.0 },
   { pattern: /report|metric|benchmark|performance|kpi/i, agent: "analytics", weight: 0.8 },
+
+  // Desktop / Files
+  { pattern: /organize|clean.*desk|sort.*files|find.*document|where.*file/i, agent: "desktop_organizer", weight: 1.0 },
+  { pattern: /download|screenshot|folder|move.*file/i, agent: "desktop_organizer", weight: 0.7 },
+
+  // Financial
+  { pattern: /financial|expense|payer.*mix|overhead|profit|savings|cost.*reduction/i, agent: "financial_dashboard", weight: 1.0 },
+  { pattern: /presentation|powerpoint|slide|board.*meeting/i, agent: "financial_dashboard", weight: 0.8 },
+
+  // Day Prep
+  { pattern: /morning|today|tomorrow|schedule|brief|prep.*day|what.*today|case.*list/i, agent: "day_prep", weight: 1.0 },
+  { pattern: /calendar|or.*schedule|clinic.*list|ready.*for/i, agent: "day_prep", weight: 0.8 },
+
+  // Prototype
+  { pattern: /build.*me|create.*tool|make.*calculator|patient.*handout|intake.*form|workflow/i, agent: "prototype_builder", weight: 1.0 },
+  { pattern: /prototype|template|automat/i, agent: "prototype_builder", weight: 0.7 },
 ];
 
 export function routeToAgent(message: string): IntentClassification {
