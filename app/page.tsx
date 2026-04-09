@@ -715,6 +715,36 @@ export default function Home() {
         "Sends automated check-ins, appointment reminders, and post-op protocols via the patient's preferred channel.",
       icon: <PatientAcquisitionIcon className="w-5 h-5" />,
     },
+    {
+      name: "Claim Submission",
+      description:
+        "Validates claims against payer rules, formats CMS-1500/UB-04, submits to clearinghouse, and tracks until acceptance. No dirty claims leave here.",
+      icon: <DocumentationIcon className="w-5 h-5" />,
+    },
+    {
+      name: "Payment Posting",
+      description:
+        "Processes ERA/835 files, matches payments to claims, reconciles against contracted rates, flags underpayments. Every dollar tracked.",
+      icon: <BillingOptimizerIcon className="w-5 h-5" />,
+    },
+    {
+      name: "AR Management",
+      description:
+        "Monitors A/R aging, prioritizes follow-ups by dollar and deadline, escalates stale claims, forecasts collections. No valid claim goes unpaid.",
+      icon: <PracticeAnalyticsIcon className="w-5 h-5" />,
+    },
+    {
+      name: "Denials Fighter",
+      description:
+        "Categorizes denials by CARC/RARC code, drafts appeal letters citing your operative note and CPT guidelines, tracks through all appeal levels. Many denials are wrong.",
+      icon: <PriorAuthIcon className="w-5 h-5" />,
+    },
+    {
+      name: "Patient Billing",
+      description:
+        "Calculates patient responsibility, generates clear statements, offers payment plans, checks HSA/FSA eligibility via ComfortCard. Clear billing = paid bills.",
+      icon: <PatientAcquisitionIcon className="w-5 h-5" />,
+    },
   ];
 
   return (
@@ -759,13 +789,12 @@ export default function Home() {
             $240,000 on the table.
           </h1>
           <p className="text-xl text-navy/70 max-w-2xl mx-auto mb-10 leading-relaxed">
-            SurgeonValue finds the CPT codes you qualify for but don&apos;t bill. 10
-            AI agents scan your panel, a physician attests, and you get paid.{" "}
+            From op note to bank account. 19 AI agents handle your entire revenue cycle — charge capture, claim submission, denials, collections.{" "}
             <span className="font-semibold text-navy">$20 per encounter. Only when you bill.</span>
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <a href="#agents" className="px-8 py-4 bg-teal text-white font-bold text-lg rounded-xl hover:bg-teal/90 hover:shadow-lg transition-all duration-300 hover:scale-105">
-              See the 10 agents
+              See the 19 agents
             </a>
             <a href="#wonder-bill" className="px-8 py-4 bg-navy text-white font-bold text-lg rounded-xl hover:bg-navy/90 hover:shadow-lg transition-all duration-300 hover:scale-105">
               Try Wonder Bill
@@ -832,7 +861,7 @@ export default function Home() {
           <div className="text-center">
             <SectionLabel>The Platform</SectionLabel>
             <h2 className="text-3xl md:text-4xl font-bold text-navy mb-4">
-              10 agents. One mission: get you paid.
+              19 agents. One mission: get you paid.
             </h2>
             <p className="text-navy/60 max-w-2xl mx-auto mb-14">
               Each agent handles a specific revenue stream. They work your panel
@@ -863,6 +892,41 @@ export default function Home() {
       {/* ─── Wonder Bill Demo ─── */}
       <WonderBillDemo />
 
+      {/* ─── Full RCM Pipeline ─── */}
+      <section className="py-20 px-6 bg-cream">
+        <div className="max-w-5xl mx-auto">
+          <div className="text-center mb-12">
+            <SectionLabel>Full Revenue Cycle</SectionLabel>
+            <h2 className="text-3xl md:text-4xl font-bold text-navy mb-4">
+              From surgery to bank account. Every step automated.
+            </h2>
+            <p className="text-navy/60 max-w-2xl mx-auto">
+              Most platforms handle one piece. SurgeonValue handles the entire revenue cycle — 7 stages, 19 agents, one harness.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-7 gap-3">
+            {[
+              { step: "1", name: "Op Note", desc: "Wonder Bill optimizes documentation before it's finalized", color: "bg-teal" },
+              { step: "2", name: "Charge Capture", desc: "Every code identified, modifiers checked, unbundling verified", color: "bg-teal/90" },
+              { step: "3", name: "Claim Submit", desc: "Validated against payer rules, formatted, submitted clean", color: "bg-teal/80" },
+              { step: "4", name: "Payment Post", desc: "ERA processed, reconciled against contracted rates", color: "bg-teal/70" },
+              { step: "5", name: "AR Manage", desc: "Aging tracked, follow-ups prioritized, collections forecast", color: "bg-navy/80" },
+              { step: "6", name: "Denials", desc: "Categorized, appealed with citations, patterns prevented", color: "bg-navy/70" },
+              { step: "7", name: "Patient Bill", desc: "Clear statements, payment plans, HSA/FSA via ComfortCard", color: "bg-navy/60" },
+            ].map((s) => (
+              <div key={s.step} className={`${s.color} rounded-2xl p-5 text-white text-center`}>
+                <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center mx-auto mb-2 text-sm font-bold">{s.step}</div>
+                <h3 className="font-bold text-sm mb-1">{s.name}</h3>
+                <p className="text-white/70 text-xs leading-relaxed">{s.desc}</p>
+              </div>
+            ))}
+          </div>
+          <div className="mt-8 text-center">
+            <p className="text-navy/40 text-sm">Claimocity and other RCM platforms charge per-provider SaaS fees. We charge <span className="font-bold text-navy">$20 per encounter, only when you bill.</span></p>
+          </div>
+        </div>
+      </section>
+
       {/* ─── How It Works ─── */}
       <section className="py-20 px-6 bg-white">
         <div className="max-w-6xl mx-auto">
@@ -882,7 +946,7 @@ export default function Home() {
             <StepCard
               step={2}
               title="AI Scans Panel"
-              description="10 agents analyze your full patient panel and surface every missed code."
+              description="19 agents analyze your full patient panel and surface every missed code."
               icon={<ScanIcon className="w-7 h-7" />}
             />
             <StepCard
@@ -964,10 +1028,10 @@ export default function Home() {
             <PricingCard
               name="Pro"
               price="$299/mo"
-              description="All 10 agents + priority"
+              description="All 19 agents + priority"
               highlighted
               features={[
-                "All 10 agents active",
+                "All 19 agents active",
                 "EMR integration",
                 "Real-time revenue dashboard",
                 "ClinicalSwipe attestation",
