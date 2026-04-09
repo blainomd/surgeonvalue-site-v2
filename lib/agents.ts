@@ -12,6 +12,7 @@ export type AgentType =
   | "orchestrator"
   | "prior_auth"
   | "billing"
+  | "wonder_bill"
   | "acquisition"
   | "referral"
   | "documentation"
