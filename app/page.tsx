@@ -13,12 +13,11 @@ const iconProps = {
   strokeLinejoin: "round" as const,
 };
 
-function ScalpelIcon({ className = "w-7 h-7" }: { className?: string }) {
+function BrandMark({ className = "w-7 h-7" }: { className?: string }) {
   return (
-    <svg {...iconProps} className={className}>
-      <path d="M5 20c4-6 8-12 14-16" />
-      <path d="M17 6l2-3 2 3" />
-      <path d="M4 19l1 3 2-1-1-3z" />
+    <svg className={className} viewBox="0 0 80 90" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <polygon points="0,10 40,85 80,10" fill="#0D7377"/>
+      <circle cx="40" cy="34" r="20" fill="white"/>
     </svg>
   );
 }
@@ -753,7 +752,7 @@ export default function Home() {
       <nav className="sticky top-0 z-50 bg-cream/95 backdrop-blur-lg border-b border-navy/5">
         <div className="max-w-6xl mx-auto flex items-center justify-between px-6 py-4">
           <a href="/" className="flex items-center gap-2 text-teal">
-            <ScalpelIcon />
+            <BrandMark />
             <span className="font-bold text-xl text-navy">SurgeonValue</span>
           </a>
           <div className="hidden md:flex items-center gap-8 text-sm text-navy/70">
@@ -1195,7 +1194,7 @@ export default function Home() {
         <div className="max-w-6xl mx-auto">
           <div className="flex flex-col md:flex-row items-center justify-between gap-8">
             <div className="flex items-center gap-2 text-white">
-              <ScalpelIcon className="w-6 h-6" />
+              <BrandMark className="w-6 h-6" />
               <span className="font-bold text-lg">SurgeonValue</span>
             </div>
             <div className="flex flex-wrap justify-center gap-6 text-sm">
