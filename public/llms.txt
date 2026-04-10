@@ -1,0 +1,48 @@
+# SurgeonValue
+
+> 9 AI agents that help orthopedic surgeons capture revenue they're already earning but not billing.
+
+## What we do
+SurgeonValue scans a surgeon's panel, identifies missed billing codes, generates prior authorization letters, collects patient-reported outcomes, and models episode costs under CMS bundled payment models (TEAM, CJR-X). Physician-attested. Flat fee. AKS compliant.
+
+## Key products
+- **Wonder Bill**: Paste an op note, see every code you qualify for but didn't bill. 60 seconds.
+- **Prior Auth Agent**: Generates peer-to-peer-ready authorization letters from operative notes. FHIR-compatible.
+- **Episode Cost Analyzer**: Models 90-day episode costs against CJR-X target prices.
+- **Revenue Scanner**: Panel-wide missed-code identification across RTM, CCM, TCM, ACP, PIN.
+- **PROM Collector**: Automated patient-reported outcome collection (PROMIS, HOOS, KOOS).
+
+## Pricing
+- Free: Enter NPI, see missed revenue estimate. No login.
+- Core: $199/mo + $20/encounter
+- Pro: $299/mo + $20/encounter (includes CJR-X episode optimization)
+- Enterprise: Custom
+
+## CMS context
+- CJR-X (proposed April 10, 2026): First nationwide mandatory episode-based payment for joints. 2,500+ hospitals. 90-day episodes.
+- Prior auth reform (proposed April 10, 2026): 24-hour urgent / 72-hour standard PA decision deadlines. FHIR-based electronic submission.
+
+## Technical
+- Built on Anthropic Claude (sole frontier model)
+- MCP server with 22+ tools (episode cost, billing analysis, prior auth, benchmarks)
+- Supabase Auth + Stripe billing
+- HIPAA compliant
+
+## Who we are
+SurgeonValue is a product of SolvingHealth LLC (Colorado). Founded by Blaine Warkentine, MD — 20+ years in orthopedic technology, grew BrainLAB's orthopedic vertical from $0 to $250M.
+
+## Links
+- Website: https://surgeonvalue.com
+- CJR-X page: https://surgeonvalue.com/cjr-x
+- Parent: https://solvinghealth.com
+- Care platform: https://co-op.care
+- Advance care planning: https://caregoals.com
+
+## MCP connector
+```json
+"surgeonvalue": {
+  "command": "npx",
+  "args": ["-y", "@anthropic-ai/mcp-remote",
+    "https://solvinghealth.com/mcp"]
+}
+```
