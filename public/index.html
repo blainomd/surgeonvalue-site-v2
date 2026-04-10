@@ -214,17 +214,17 @@
 <p class="text-on-surface-variant max-w-lg">9 AI agents that scan your panel, find missed revenue, and prepare your practice for CJR-X.</p>
 </div>
 <div class="flex gap-4">
-<button class="w-12 h-12 rounded-full border border-outline-variant flex items-center justify-center hover:bg-primary hover:text-white transition-colors">
+<button onclick="document.getElementById('agent-carousel').scrollBy({left:-350,behavior:'smooth'})" class="w-12 h-12 rounded-full border border-outline-variant flex items-center justify-center hover:bg-primary hover:text-white transition-colors cursor-pointer">
 <span class="material-symbols-outlined">arrow_back</span>
 </button>
-<button class="w-12 h-12 rounded-full border border-outline-variant flex items-center justify-center hover:bg-primary hover:text-white transition-colors">
+<button onclick="document.getElementById('agent-carousel').scrollBy({left:350,behavior:'smooth'})" class="w-12 h-12 rounded-full border border-outline-variant flex items-center justify-center hover:bg-primary hover:text-white transition-colors cursor-pointer">
 <span class="material-symbols-outlined">arrow_forward</span>
 </button>
 </div>
 </div>
-<div class="flex gap-8 overflow-x-auto no-scrollbar pb-12 px-4 mask-fade-right">
+<div id="agent-carousel" class="flex gap-8 overflow-x-auto no-scrollbar pb-12 px-4" style="-webkit-overflow-scrolling:touch;scroll-snap-type:x mandatory;">
 <!-- Highlighted Agent -->
-<div class="flex-shrink-0 w-80 md:w-[450px] bg-primary p-10 rounded-[2rem] text-white relative overflow-hidden shadow-2xl">
+<div class="flex-shrink-0 w-80 md:w-[450px] bg-primary p-10 rounded-[2rem] snap-start text-white relative overflow-hidden shadow-2xl">
 <div class="absolute top-0 right-0 p-8 opacity-10">
 <span class="material-symbols-outlined text-[120px]" style="font-variation-settings: 'FILL' 1;">verified_user</span>
 </div>
@@ -236,21 +236,21 @@
 </button>
 </div>
 <!-- Secondary Agents -->
-<div class="flex-shrink-0 w-80 bg-white p-10 rounded-[2rem] border border-surface-container-highest shadow-sm hover:shadow-xl transition-all">
+<div class="flex-shrink-0 w-80 bg-white p-10 rounded-[2rem] snap-start border border-surface-container-highest shadow-sm hover:shadow-xl transition-all">
 <div class="w-12 h-12 bg-tertiary-fixed rounded-xl flex items-center justify-center mb-6">
 <span class="material-symbols-outlined text-tertiary">clinical_notes</span>
 </div>
 <h3 class="text-xl font-headline font-bold mb-3">Coding Audit Agent</h3>
 <p class="text-on-surface-variant text-sm mb-8 leading-relaxed">Real-time CPT validation against surgeon operative reports for maximal compliance.</p>
 </div>
-<div class="flex-shrink-0 w-80 bg-white p-10 rounded-[2rem] border border-surface-container-highest shadow-sm hover:shadow-xl transition-all">
+<div class="flex-shrink-0 w-80 bg-white p-10 rounded-[2rem] snap-start border border-surface-container-highest shadow-sm hover:shadow-xl transition-all">
 <div class="w-12 h-12 bg-tertiary-fixed rounded-xl flex items-center justify-center mb-6">
 <span class="material-symbols-outlined text-tertiary">payments</span>
 </div>
 <h3 class="text-xl font-headline font-bold mb-3">Revenue Recovery</h3>
 <p class="text-on-surface-variant text-sm mb-8 leading-relaxed">Predictive underpayment detection across commercial and federal payers.</p>
 </div>
-<div class="flex-shrink-0 w-80 bg-white p-10 rounded-[2rem] border border-surface-container-highest shadow-sm hover:shadow-xl transition-all">
+<div class="flex-shrink-0 w-80 bg-white p-10 rounded-[2rem] snap-start border border-surface-container-highest shadow-sm hover:shadow-xl transition-all">
 <div class="w-12 h-12 bg-tertiary-fixed rounded-xl flex items-center justify-center mb-6">
 <span class="material-symbols-outlined text-tertiary">receipt_long</span>
 </div>
@@ -415,6 +415,34 @@
 </div>
 </section>
 <style>@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}</style>
+<!-- AI Connector Section -->
+<section style="padding:80px 24px;background:#f3f4f5;">
+<div style="max-width:900px;margin:0 auto;">
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:32px;align-items:start;">
+<div>
+<p style="font-family:'Manrope',sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.15em;color:rgba(0,53,54,0.4);margin-bottom:12px;">Already use Claude?</p>
+<h2 style="font-family:'Manrope',sans-serif;font-size:clamp(24px,3vw,36px);font-weight:800;color:#003536;line-height:1.2;margin-bottom:16px;">Add the SurgeonValue connector</h2>
+<p style="font-size:15px;color:#3f4849;line-height:1.7;margin-bottom:24px;">Install the MCP connector in Claude Desktop and get instant access to Wonder Bill, Prior Auth, episode cost analysis, and all 9 agents from any conversation.</p>
+<div style="display:flex;gap:12px;flex-wrap:wrap;">
+<span style="font-size:12px;font-weight:600;background:rgba(0,53,54,0.08);color:#003536;padding:4px 12px;border-radius:100px;">Wonder Bill</span>
+<span style="font-size:12px;font-weight:600;background:rgba(0,53,54,0.08);color:#003536;padding:4px 12px;border-radius:100px;">Prior Auth</span>
+<span style="font-size:12px;font-weight:600;background:rgba(0,53,54,0.08);color:#003536;padding:4px 12px;border-radius:100px;">Episode Cost</span>
+<span style="font-size:12px;font-weight:600;background:rgba(0,53,54,0.08);color:#003536;padding:4px 12px;border-radius:100px;">Revenue Scanner</span>
+</div>
+</div>
+<div style="background:#003536;border-radius:16px;padding:24px;color:#fff;">
+<p style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:rgba(255,255,255,0.4);margin-bottom:12px;">Claude Desktop MCP Config</p>
+<pre style="font-size:13px;font-family:monospace;color:#94d1d3;overflow-x:auto;white-space:pre;line-height:1.6;margin-bottom:16px;">"surgeonvalue": {
+  "command": "npx",
+  "args": ["-y", "@anthropic-ai/mcp-remote",
+    "https://solvinghealth.com/mcp"]
+}</pre>
+<p style="font-size:12px;color:rgba(255,255,255,0.4);">Or use the chat and voice widgets on this page — bottom right corner.</p>
+</div>
+</div>
+</div>
+</section>
+
 <!-- Pricing Section -->
 <section class="py-32 px-6 bg-white">
 <div class="max-w-7xl mx-auto text-center mb-20">
