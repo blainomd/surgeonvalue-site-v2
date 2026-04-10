@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "error-container": "#ffdad6",
+                    "on-error": "#ffffff",
+                    "surface-container-highest": "#e1e3e4",
+                    "background": "#f8f9fa",
+                    "on-primary-fixed": "#002021",
+                    "error": "#ba1a1a",
+                    "secondary-fixed-dim": "#bdc2ff",
+                    "secondary-fixed": "#e0e0ff",
+                    "on-tertiary-container": "#9bb6c3",
+                    "primary-fixed": "#b0edef",
+                    "tertiary-fixed": "#cbe7f5",
+                    "on-tertiary-fixed-variant": "#304a55",
+                    "surface-dim": "#d9dadb",
+                    "surface-tint": "#296769",
+                    "on-primary-container": "#80bdbe",
+                    "inverse-on-surface": "#f0f1f2",
+                    "surface-container": "#edeeef",
+                    "surface-container-high": "#e7e8e9",
+                    "secondary": "#4c56af",
+                    "surface-variant": "#e1e3e4",
+                    "on-secondary-container": "#27308a",
+                    "on-secondary-fixed-variant": "#343d96",
+                    "surface-container-lowest": "#ffffff",
+                    "tertiary-container": "#2e4853",
+                    "inverse-surface": "#2e3132",
+                    "on-background": "#191c1d",
+                    "primary": "#003536",
+                    "on-primary": "#ffffff",
+                    "on-surface": "#191c1d",
+                    "inverse-primary": "#94d1d3",
+                    "primary-fixed-dim": "#94d1d3",
+                    "on-secondary-fixed": "#000767",
+                    "surface-container-low": "#f3f4f5",
+                    "primary-container": "#004d4f",
+                    "on-surface-variant": "#3f4849",
+                    "on-primary-fixed-variant": "#044f51",
+                    "outline": "#707979",
+                    "on-tertiary": "#ffffff",
+                    "on-tertiary-fixed": "#021f29",
+                    "secondary-container": "#959efd",
+                    "outline-variant": "#bfc8c8",
+                    "tertiary": "#17323c",
+                    "tertiary-fixed-dim": "#afcbd8",
+                    "on-error-container": "#93000a",
+                    "surface-bright": "#f8f9fa",
+                    "surface": "#f8f9fa",
+                    "on-secondary": "#ffffff"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "0.75rem"
+            },
+            "fontFamily": {
+                    "headline": ["Manrope"],
+                    "body": ["Inter"],
+                    "label": ["Inter"]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+        .hero-gradient {
+            background: radial-gradient(circle at top right, #004d4f, #003536);
+        }
+        .mask-fade-right {
+            mask-image: linear-gradient(to right, black 80%, transparent 100%);
+        }
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface font-body text-on-surface">
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full z-50 bg-white/70 backdrop-blur-xl flex justify-between items-center px-6 py-4 w-full shadow-[0_20px_40px_rgba(25,28,29,0.05)]">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-teal-900 dark:text-teal-500 text-2xl">medical_services</span>
+<span class="text-xl font-bold tracking-tight text-teal-950 dark:text-teal-50 font-headline">SurgeonValue</span>
+</div>
+<nav class="hidden md:flex gap-8 items-center">
+<a class="text-teal-600 font-semibold font-headline transition-opacity hover:opacity-80" href="#">Solutions</a>
+<a class="text-slate-500 font-medium font-headline transition-opacity hover:opacity-80" href="#">AI Agents</a>
+<a class="text-slate-500 font-medium font-headline transition-opacity hover:opacity-80" href="#">Pricing</a>
+<a class="text-slate-500 font-medium font-headline transition-opacity hover:opacity-80" href="#">Support</a>
+</nav>
+<button class="bg-primary text-on-primary px-6 py-2 rounded-xl font-bold font-headline text-sm scale-95 active:scale-90 transition-transform">Get Started</button>
+</header>
+<main class="pt-20">
+<!-- Hero Section -->
+<section class="hero-gradient relative min-h-[795px] flex flex-col justify-center items-center px-6 py-24 text-center overflow-hidden">
+<div class="absolute inset-0 opacity-20" data-alt="abstract architectural glass structures with deep teal lighting and professional medical atmosphere" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCKPK4zlpoqiwspnwTKDquRm-kGWIMakwqqzxu7AnGRprRN7M7YEwWQqSdNI9X2vU7orDVqPx7BUz4tGwMa8it4Mm6qrJlZIelXPft9YInwg_MyCAxtLTNqDi7_JBpbvqZJqpw9p65M-3E2Pssu3FeLbvG_CDZIjAJPU5Jv7o87QdyJqqSjyXRZWAx2ephJ7yVC8SvcZC5hGGrbWPMZzHOlGq3XZkB4L0_YxV44o-HUSCY4aBvaQ05s4AnC6WPwo9JdNmeENykB83w');"></div>
+<div class="relative z-10 max-w-5xl mx-auto">
+<span class="text-primary-fixed uppercase tracking-[0.2em] font-bold text-xs mb-8 block">The Financial Precision Engine</span>
+<h1 class="font-headline text-5xl md:text-7xl font-extrabold text-white leading-tight mb-8 tracking-tight">
+                    Recover <span class="text-primary-fixed">$240,000</span> <br/>In Annual Revenue Leakage.
+                </h1>
+<p class="text-primary-fixed/80 text-lg md:text-xl max-w-2xl mx-auto mb-12 font-medium leading-relaxed">
+                    Institutional-grade AI agents for high-acuity surgical practices. Automated prior-auth, clinical coding, and predictive billing.
+                </p>
+<!-- Audit Search Bar -->
+<div class="bg-white/10 backdrop-blur-xl p-2 rounded-2xl max-w-2xl mx-auto flex items-center shadow-2xl border border-white/10">
+<div class="flex-1 px-4 flex items-center gap-3">
+<span class="material-symbols-outlined text-white/50">search</span>
+<input class="bg-transparent border-none focus:ring-0 text-white placeholder:text-white/40 w-full py-4 font-headline" placeholder="Physician Name or NPI" type="text"/>
+</div>
+<button class="bg-primary-fixed text-on-primary-fixed px-8 py-4 rounded-xl font-bold font-headline text-sm hover:bg-white transition-all">Generate Leakage Audit</button>
+</div>
+</div>
+<!-- Revenue Leakage Visual Metaphor -->
+<div class="absolute bottom-0 left-0 w-full h-32 bg-gradient-to-t from-background to-transparent z-10"></div>
+</section>
+<!-- Stats Section -->
+<section class="py-32 px-6 bg-background relative">
+<div class="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-16 items-center">
+<div class="relative">
+<div class="absolute -top-12 -left-12 w-48 h-48 border-l border-t border-primary/10"></div>
+<div class="space-y-12">
+<div class="group">
+<div class="text-8xl font-black font-headline text-primary tracking-tighter mb-2 group-hover:translate-x-2 transition-transform">96%</div>
+<p class="text-on-surface-variant font-medium tracking-wide border-l-4 border-primary pl-4">First-pass clean claim rate across 200+ surgical centers.</p>
+</div>
+<div class="group">
+<div class="text-8xl font-black font-headline text-primary tracking-tighter mb-2 group-hover:translate-x-2 transition-transform">373%</div>
+<p class="text-on-surface-variant font-medium tracking-wide border-l-4 border-primary pl-4">Average ROI within the first 12 months of implementation.</p>
+</div>
+</div>
+</div>
+<div class="aspect-square bg-surface-container-low rounded-[2rem] overflow-hidden relative">
+<img class="w-full h-full object-cover grayscale mix-blend-multiply opacity-40" data-alt="clean medical data visualization on a high-end monitor in a dark professional setting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBcPshJ7ScN6G7CZTFyFspjQ6UIgwfa791Iud4BCbnmddasAaySpwtbU7lZcvh8Bv5Bl8Dpnr7H9SrBROcsoAfeGRaCyl6hkNtclLzgbKKHOjCGZIjPrfj7nQwFikDDsQlne8v4xgWtsVhameswxjabNw8vbzg1E17iY94px0dpZE_rTuuBwVQUQk8tw5LHNPfRdAsq3-IgGFDEezoGhYK6591kDb5YcwB6diXrwrdUwu_M27dWUg7aYueklr8Nd3v42yJvL7B0PRo"/>
+<div class="absolute inset-0 flex items-center justify-center p-12">
+<div class="bg-white p-8 rounded-2xl shadow-xl space-y-6">
+<div class="h-2 w-24 bg-primary/10 rounded-full"></div>
+<div class="h-2 w-48 bg-primary/20 rounded-full"></div>
+<div class="h-2 w-32 bg-primary/10 rounded-full"></div>
+<div class="grid grid-cols-4 gap-2 pt-4">
+<div class="h-12 bg-primary rounded-lg"></div>
+<div class="h-8 bg-primary/60 rounded-lg"></div>
+<div class="h-16 bg-primary/80 rounded-lg"></div>
+<div class="h-10 bg-primary/40 rounded-lg"></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- AI Agents Carousel Section -->
+<section class="py-32 px-6 bg-surface-container-low overflow-hidden">
+<div class="max-w-7xl mx-auto mb-20 flex justify-between items-end">
+<div>
+<h2 class="font-headline text-4xl font-extrabold text-primary mb-4">Precision Intelligence</h2>
+<p class="text-on-surface-variant max-w-lg">19 specialized AI agents engineered for the surgical lifecycle, from procurement to payout.</p>
+</div>
+<div class="flex gap-4">
+<button class="w-12 h-12 rounded-full border border-outline-variant flex items-center justify-center hover:bg-primary hover:text-white transition-colors">
+<span class="material-symbols-outlined">arrow_back</span>
+</button>
+<button class="w-12 h-12 rounded-full border border-outline-variant flex items-center justify-center hover:bg-primary hover:text-white transition-colors">
+<span class="material-symbols-outlined">arrow_forward</span>
+</button>
+</div>
+</div>
+<div class="flex gap-8 overflow-x-auto no-scrollbar pb-12 px-4 mask-fade-right">
+<!-- Highlighted Agent -->
+<div class="flex-shrink-0 w-80 md:w-[450px] bg-primary p-10 rounded-[2rem] text-white relative overflow-hidden shadow-2xl">
+<div class="absolute top-0 right-0 p-8 opacity-10">
+<span class="material-symbols-outlined text-[120px]" style="font-variation-settings: 'FILL' 1;">verified_user</span>
+</div>
+<span class="inline-block bg-primary-container text-on-primary-container px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest mb-6">Spotlight</span>
+<h3 class="text-3xl font-headline font-bold mb-4">Prior Auth Agent</h3>
+<p class="text-primary-fixed/70 mb-8 leading-relaxed">Automates the collection of clinical necessity documentation and insurer submission. Reduces denial rates by 62%.</p>
+<button class="flex items-center gap-2 font-bold font-headline text-sm group">
+                        Deploy Agent <span class="material-symbols-outlined group-hover:translate-x-1 transition-transform">arrow_right_alt</span>
+</button>
+</div>
+<!-- Secondary Agents -->
+<div class="flex-shrink-0 w-80 bg-white p-10 rounded-[2rem] border border-surface-container-highest shadow-sm hover:shadow-xl transition-all">
+<div class="w-12 h-12 bg-tertiary-fixed rounded-xl flex items-center justify-center mb-6">
+<span class="material-symbols-outlined text-tertiary">clinical_notes</span>
+</div>
+<h3 class="text-xl font-headline font-bold mb-3">Coding Audit Agent</h3>
+<p class="text-on-surface-variant text-sm mb-8 leading-relaxed">Real-time CPT validation against surgeon operative reports for maximal compliance.</p>
+</div>
+<div class="flex-shrink-0 w-80 bg-white p-10 rounded-[2rem] border border-surface-container-highest shadow-sm hover:shadow-xl transition-all">
+<div class="w-12 h-12 bg-tertiary-fixed rounded-xl flex items-center justify-center mb-6">
+<span class="material-symbols-outlined text-tertiary">payments</span>
+</div>
+<h3 class="text-xl font-headline font-bold mb-3">Revenue Recovery</h3>
+<p class="text-on-surface-variant text-sm mb-8 leading-relaxed">Predictive underpayment detection across commercial and federal payers.</p>
+</div>
+<div class="flex-shrink-0 w-80 bg-white p-10 rounded-[2rem] border border-surface-container-highest shadow-sm hover:shadow-xl transition-all">
+<div class="w-12 h-12 bg-tertiary-fixed rounded-xl flex items-center justify-center mb-6">
+<span class="material-symbols-outlined text-tertiary">analytics</span>
+</div>
+<h3 class="text-xl font-headline font-bold mb-3">Supply Chain AI</h3>
+<p class="text-on-surface-variant text-sm mb-8 leading-relaxed">Case-by-case surgical supply optimization based on surgeon preference cards.</p>
+</div>
+</div>
+</section>
+<!-- Implementation Timeline Section -->
+<section class="py-32 px-6 bg-white">
+<div class="max-w-4xl mx-auto">
+<div class="text-center mb-24">
+<h2 class="font-headline text-4xl font-extrabold text-primary mb-4">Precision Onboarding</h2>
+<p class="text-on-surface-variant">Seamless integration within your existing clinical infrastructure.</p>
+</div>
+<div class="relative">
+<div class="absolute left-1/2 -translate-x-1/2 top-0 bottom-0 w-px bg-gradient-to-b from-primary/5 via-primary/20 to-primary/5"></div>
+<div class="space-y-24 relative">
+<!-- Step 1 -->
+<div class="flex items-center justify-center group">
+<div class="w-1/2 pr-12 text-right hidden md:block">
+<h4 class="font-headline font-bold text-xl mb-2 text-primary">Credentialing Audit</h4>
+<p class="text-sm text-on-surface-variant">Secure ingestion of historical claim data and payer contracts.</p>
+</div>
+<div class="relative z-10">
+<div class="w-12 h-12 rounded-full glass-panel border border-primary/20 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+<span class="text-primary font-bold">01</span>
+</div>
+</div>
+<div class="w-1/2 pl-12 md:text-left text-center">
+<div class="md:hidden">
+<h4 class="font-headline font-bold text-xl mb-2 text-primary">Credentialing Audit</h4>
+<p class="text-sm text-on-surface-variant">Secure ingestion of historical claim data and payer contracts.</p>
+</div>
+<span class="hidden md:inline-block text-[10px] uppercase font-bold tracking-widest text-primary/40">Phase I</span>
+</div>
+</div>
+<!-- Step 2 -->
+<div class="flex items-center justify-center group">
+<div class="w-1/2 pr-12 text-right">
+<span class="hidden md:inline-block text-[10px] uppercase font-bold tracking-widest text-primary/40">Phase II</span>
+<div class="md:hidden">
+<h4 class="font-headline font-bold text-xl mb-2 text-primary">EMR Bridge</h4>
+<p class="text-sm text-on-surface-variant">HL7 and FHIR integration with Epic, Cerner, or Modernizing Medicine.</p>
+</div>
+</div>
+<div class="relative z-10">
+<div class="w-12 h-12 rounded-full glass-panel border border-primary/20 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+<span class="text-primary font-bold">02</span>
+</div>
+</div>
+<div class="w-1/2 pl-12 hidden md:block">
+<h4 class="font-headline font-bold text-xl mb-2 text-primary">EMR Bridge</h4>
+<p class="text-sm text-on-surface-variant">HL7 and FHIR integration with Epic, Cerner, or Modernizing Medicine.</p>
+</div>
+</div>
+<!-- Step 3 -->
+<div class="flex items-center justify-center group">
+<div class="w-1/2 pr-12 text-right hidden md:block">
+<h4 class="font-headline font-bold text-xl mb-2 text-primary">Agent Training</h4>
+<p class="text-sm text-on-surface-variant">AI models calibrate to your practice's specific surgical workflows.</p>
+</div>
+<div class="relative z-10">
+<div class="w-12 h-12 rounded-full glass-panel border border-primary/20 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+<span class="text-primary font-bold">03</span>
+</div>
+</div>
+<div class="w-1/2 pl-12 md:text-left text-center">
+<div class="md:hidden">
+<h4 class="font-headline font-bold text-xl mb-2 text-primary">Agent Training</h4>
+<p class="text-sm text-on-surface-variant">AI models calibrate to your practice's specific surgical workflows.</p>
+</div>
+<span class="hidden md:inline-block text-[10px] uppercase font-bold tracking-widest text-primary/40">Phase III</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Interactive Calculator Section -->
+<section class="py-32 px-6 bg-surface-container">
+<div class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-24 items-center">
+<div>
+<h2 class="font-headline text-4xl font-extrabold text-primary mb-6">Potential Value Realization</h2>
+<p class="text-on-surface-variant mb-12">Calculate your practice's estimated revenue recovery based on case volume and specialty complexity.</p>
+<div class="space-y-12">
+<div class="space-y-6">
+<div class="flex justify-between items-end">
+<label class="font-headline font-bold text-sm uppercase tracking-widest text-primary/60">Annual Case Volume</label>
+<span class="text-3xl font-headline font-extrabold text-primary">1,250</span>
+</div>
+<input class="w-full h-1 bg-primary/10 rounded-lg appearance-none cursor-pointer accent-primary" type="range"/>
+</div>
+<div class="space-y-6">
+<div class="flex justify-between items-end">
+<label class="font-headline font-bold text-sm uppercase tracking-widest text-primary/60">Practice Complexity</label>
+<span class="text-xl font-headline font-extrabold text-primary">High Acuity</span>
+</div>
+<div class="grid grid-cols-3 gap-4">
+<button class="py-3 px-4 rounded-xl border border-outline-variant font-bold text-xs uppercase tracking-widest hover:bg-white transition-colors">ASC</button>
+<button class="py-3 px-4 rounded-xl border border-primary bg-primary text-white font-bold text-xs uppercase tracking-widest">Specialty</button>
+<button class="py-3 px-4 rounded-xl border border-outline-variant font-bold text-xs uppercase tracking-widest hover:bg-white transition-colors">Multi-Site</button>
+</div>
+</div>
+</div>
+</div>
+<div class="relative">
+<div class="absolute -inset-4 bg-primary/5 rounded-[3rem] blur-3xl"></div>
+<div class="relative bg-primary p-12 rounded-[2.5rem] shadow-2xl text-white">
+<div class="absolute top-0 right-0 p-8">
+<span class="material-symbols-outlined text-4xl opacity-20">payments</span>
+</div>
+<h4 class="text-primary-fixed/60 font-bold uppercase tracking-widest text-xs mb-8">Estimated Annual Recovery</h4>
+<div class="text-7xl font-black font-headline tracking-tighter mb-12">$312,450</div>
+<div class="space-y-4 mb-12">
+<div class="flex justify-between items-center py-3 border-b border-white/10">
+<span class="text-sm opacity-60">Prior Auth Leakage</span>
+<span class="font-headline font-bold text-primary-fixed">+$142k</span>
+</div>
+<div class="flex justify-between items-center py-3 border-b border-white/10">
+<span class="text-sm opacity-60">Underpayment Recovery</span>
+<span class="font-headline font-bold text-primary-fixed">+$98k</span>
+</div>
+<div class="flex justify-between items-center py-3">
+<span class="text-sm opacity-60">Efficiency Gains</span>
+<span class="font-headline font-bold text-primary-fixed">+$72k</span>
+</div>
+</div>
+<button class="w-full bg-white text-primary py-5 rounded-2xl font-black font-headline text-lg hover:bg-primary-fixed transition-colors">Get Detailed Audit</button>
+</div>
+</div>
+</div>
+</section>
+<!-- Trust Section / Ribbon -->
+<section class="py-20 bg-background border-y border-surface-container-highest overflow-hidden">
+<div class="max-w-7xl mx-auto px-6 mb-12">
+<p class="text-center text-[10px] font-bold uppercase tracking-[0.3em] text-primary/40">Seamless Integrations with Enterprise Health Systems</p>
+</div>
+<div class="flex items-center gap-24 overflow-hidden mask-fade-right">
+<div class="flex-shrink-0 flex items-center gap-24 opacity-40 grayscale hover:grayscale-0 hover:opacity-100 transition-all">
+<span class="font-black text-2xl tracking-tighter font-headline text-slate-800">EPIC</span>
+<span class="font-bold text-2xl tracking-tighter font-headline text-slate-800 italic">Cerner</span>
+<span class="font-bold text-2xl tracking-tighter font-headline text-slate-800">athenahealth</span>
+<span class="font-black text-2xl tracking-tighter font-headline text-slate-800">MODMED</span>
+<span class="font-bold text-2xl tracking-tighter font-headline text-slate-800">NextGen</span>
+<span class="font-black text-2xl tracking-tighter font-headline text-slate-800">EPIC</span>
+<span class="font-bold text-2xl tracking-tighter font-headline text-slate-800 italic">Cerner</span>
+<span class="font-bold text-2xl tracking-tighter font-headline text-slate-800">athenahealth</span>
+</div>
+</div>
+</section>
+<!-- Pricing Section -->
+<section class="py-32 px-6 bg-white">
+<div class="max-w-7xl mx-auto text-center mb-20">
+<h2 class="font-headline text-4xl font-extrabold text-primary mb-4">Scalable Clinical Value</h2>
+<p class="text-on-surface-variant max-w-lg mx-auto">Performance-based pricing models built for surgical group sustainability.</p>
+</div>
+<div class="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8">
+<!-- Standard -->
+<div class="p-10 rounded-[2rem] border border-surface-container-highest flex flex-col hover:border-primary/20 transition-all group">
+<h3 class="font-headline font-bold text-xl mb-2">Foundation</h3>
+<p class="text-sm text-on-surface-variant mb-8">AI-driven coding &amp; prior-auth for small surgical groups.</p>
+<div class="mb-10">
+<span class="text-4xl font-black font-headline">$2,450</span>
+<span class="text-on-surface-variant">/mo</span>
+</div>
+<ul class="space-y-4 mb-12 flex-1">
+<li class="flex items-center gap-3 text-sm"><span class="material-symbols-outlined text-primary text-lg">check_circle</span> 5 Core AI Agents</li>
+<li class="flex items-center gap-3 text-sm"><span class="material-symbols-outlined text-primary text-lg">check_circle</span> Unlimited Claims</li>
+<li class="flex items-center gap-3 text-sm text-on-surface-variant/40"><span class="material-symbols-outlined text-lg">check_circle</span> 24/7 Support</li>
+</ul>
+<button class="w-full py-4 rounded-xl border border-outline-variant font-bold font-headline group-hover:bg-primary group-hover:text-white transition-all">Get Started</button>
+</div>
+<!-- Care - Spotlighted -->
+<div class="p-1 glass-panel rounded-[2.1rem] bg-gradient-to-br from-primary to-primary-container shadow-2xl relative scale-105 z-10">
+<div class="absolute -top-4 left-1/2 -translate-x-1/2 bg-primary-fixed text-on-primary-fixed px-6 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest shadow-lg">Most Recommended</div>
+<div class="bg-white/95 rounded-[2rem] p-10 h-full flex flex-col">
+<h3 class="font-headline font-bold text-xl mb-2 text-primary">Care</h3>
+<p class="text-sm text-on-surface-variant mb-8">Full-suite revenue lifecycle automation for multi-site centers.</p>
+<div class="mb-10">
+<span class="text-4xl font-black font-headline text-primary">$5,950</span>
+<span class="text-on-surface-variant">/mo</span>
+</div>
+<ul class="space-y-4 mb-12 flex-1">
+<li class="flex items-center gap-3 text-sm"><span class="material-symbols-outlined text-primary text-lg" style="font-variation-settings: 'FILL' 1;">check_circle</span> All 19 AI Agents</li>
+<li class="flex items-center gap-3 text-sm"><span class="material-symbols-outlined text-primary text-lg" style="font-variation-settings: 'FILL' 1;">check_circle</span> Predictive Billing</li>
+<li class="flex items-center gap-3 text-sm"><span class="material-symbols-outlined text-primary text-lg" style="font-variation-settings: 'FILL' 1;">check_circle</span> Dedicated Specialist</li>
+<li class="flex items-center gap-3 text-sm"><span class="material-symbols-outlined text-primary text-lg" style="font-variation-settings: 'FILL' 1;">check_circle</span> Custom EMR Integration</li>
+</ul>
+<button class="w-full py-5 rounded-xl bg-primary text-white font-bold font-headline shadow-xl hover:shadow-primary/20 transition-all">Select Care Plan</button>
+</div>
+</div>
+<!-- Enterprise -->
+<div class="p-10 rounded-[2rem] border border-surface-container-highest flex flex-col hover:border-primary/20 transition-all group">
+<h3 class="font-headline font-bold text-xl mb-2">Hospitality</h3>
+<p class="text-sm text-on-surface-variant mb-8">Bespoke health system solutions and infrastructure.</p>
+<div class="mb-10">
+<span class="text-4xl font-black font-headline">Custom</span>
+</div>
+<ul class="space-y-4 mb-12 flex-1">
+<li class="flex items-center gap-3 text-sm"><span class="material-symbols-outlined text-primary text-lg">check_circle</span> Dedicated AI Cluster</li>
+<li class="flex items-center gap-3 text-sm"><span class="material-symbols-outlined text-primary text-lg">check_circle</span> On-Premise Options</li>
+<li class="flex items-center gap-3 text-sm"><span class="material-symbols-outlined text-primary text-lg">check_circle</span> Tier-1 Security</li>
+</ul>
+<button class="w-full py-4 rounded-xl border border-outline-variant font-bold font-headline group-hover:bg-primary group-hover:text-white transition-all">Contact Sales</button>
+</div>
+</div>
+</section>
+</main>
+<!-- Footer -->
+<footer class="bg-slate-50 dark:bg-slate-900 mt-24">
+<div class="grid grid-cols-2 md:grid-cols-4 gap-8 px-8 py-12 w-full max-w-7xl mx-auto">
+<div class="col-span-2 md:col-span-1">
+<div class="text-lg font-bold text-teal-900 dark:text-teal-100 mb-4 font-headline">SurgeonValue</div>
+<p class="font-['Inter'] text-xs leading-relaxed text-slate-500 max-w-[200px]">
+                    The next evolution in surgical financial operations. Modernizing the clinic for the age of AI.
+                </p>
+</div>
+<div>
+<h5 class="font-headline font-bold text-sm mb-6 text-primary">Company</h5>
+<ul class="space-y-3">
+<li><a class="font-['Inter'] text-xs text-slate-500 hover:text-teal-600 transition-colors" href="#">Privacy Policy</a></li>
+<li><a class="font-['Inter'] text-xs text-slate-500 hover:text-teal-600 transition-colors" href="#">Terms of Service</a></li>
+</ul>
+</div>
+<div>
+<h5 class="font-headline font-bold text-sm mb-6 text-primary">Security</h5>
+<ul class="space-y-3">
+<li><a class="font-['Inter'] text-xs text-slate-500 hover:text-teal-600 transition-colors" href="#">HIPAA Statement</a></li>
+<li><a class="font-['Inter'] text-xs text-slate-500 hover:text-teal-600 transition-colors" href="#">Data Security</a></li>
+</ul>
+</div>
+<div>
+<h5 class="font-headline font-bold text-sm mb-6 text-primary">Support</h5>
+<ul class="space-y-3">
+<li><a class="font-['Inter'] text-xs text-slate-500 hover:text-teal-600 transition-colors" href="#">Contact</a></li>
+<li><a class="font-['Inter'] text-xs text-slate-500 hover:text-teal-600 transition-colors" href="#">Documentation</a></li>
+</ul>
+</div>
+</div>
+<div class="max-w-7xl mx-auto px-8 py-6 border-t border-slate-200 text-center">
+<p class="font-['Inter'] text-xs text-slate-500">© 2024 SurgeonValue. All Rights Reserved. HIPAA Compliant Infrastructure.</p>
+</div>
+</footer>
+<!-- BottomNavBar (Mobile Only) -->
+<div class="md:hidden fixed bottom-0 w-full z-50 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-950 flex justify-around items-center px-4 py-2 pb-safe w-full">
+<div class="flex flex-col items-center justify-center bg-teal-50 dark:bg-teal-900/30 text-teal-900 dark:text-teal-100 rounded-xl px-3 py-1.5">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">biotech</span>
+<span class="font-['Inter'] text-[11px] font-medium tracking-wide">Solutions</span>
+</div>
+<div class="flex flex-col items-center justify-center text-slate-500 dark:text-slate-400 px-3 py-1.5">
+<span class="material-symbols-outlined">smart_toy</span>
+<span class="font-['Inter'] text-[11px] font-medium tracking-wide">AI Agents</span>
+</div>
+<div class="flex flex-col items-center justify-center text-slate-500 dark:text-slate-400 px-3 py-1.5">
+<span class="material-symbols-outlined">payments</span>
+<span class="font-['Inter'] text-[11px] font-medium tracking-wide">Pricing</span>
+</div>
+<div class="flex flex-col items-center justify-center text-slate-500 dark:text-slate-400 px-3 py-1.5">
+<span class="material-symbols-outlined">support_agent</span>
+<span class="font-['Inter'] text-[11px] font-medium tracking-wide">Support</span>
+</div>
+</div>
+</body></html>
