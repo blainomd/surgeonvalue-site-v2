@@ -142,6 +142,13 @@
 <button type="submit" class="bg-primary-fixed text-on-primary-fixed px-8 py-4 rounded-xl font-bold font-headline text-sm hover:bg-white transition-all whitespace-nowrap">Show me the money</button>
 </form>
 <p class="text-white/30 text-xs mt-4 font-headline">Already used by surgeons at Stanford, HCA, and 200+ practices</p>
+<!-- Trust Badges -->
+<div class="flex flex-wrap gap-6 justify-center mt-8">
+<div class="flex items-center gap-2 text-white/30 text-xs"><span class="material-symbols-outlined" style="font-size:16px;">verified_user</span> HIPAA Compliant</div>
+<div class="flex items-center gap-2 text-white/30 text-xs"><span class="material-symbols-outlined" style="font-size:16px;">hub</span> Epic / Cerner / athena</div>
+<div class="flex items-center gap-2 text-white/30 text-xs"><span class="material-symbols-outlined" style="font-size:16px;">speed</span> 48-hr onboarding</div>
+<div class="flex items-center gap-2 text-white/30 text-xs"><span class="material-symbols-outlined" style="font-size:16px;">medical_services</span> Physician-attested</div>
+</div>
 </div>
 <!-- Revenue Leakage Visual Metaphor -->
 <div class="absolute bottom-0 left-0 w-full h-32 bg-gradient-to-t from-background to-transparent z-10"></div>
@@ -450,6 +457,75 @@
 </div>
 </section>
 <style>@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}</style>
+<!-- Prior Auth 60-Second Demo -->
+<section class="py-24 px-6 bg-white">
+<div class="max-w-5xl mx-auto">
+<div class="text-center mb-16">
+<p class="text-[10px] font-bold uppercase tracking-[0.2em] text-primary/40 mb-4">Live Demo</p>
+<h2 class="font-headline text-4xl font-extrabold text-primary mb-4">Prior auth in 60 seconds. Not 45 minutes.</h2>
+<p class="text-on-surface-variant max-w-lg mx-auto">CMS just mandated 24-hour PA decisions with FHIR submission. This agent is built for that world.</p>
+</div>
+
+<div class="grid md:grid-cols-3 gap-8">
+<div class="text-center">
+<div class="w-16 h-16 rounded-2xl bg-primary/5 flex items-center justify-center mx-auto mb-4">
+<span class="material-symbols-outlined text-primary text-2xl">content_paste</span>
+</div>
+<div class="text-[10px] font-bold uppercase tracking-widest text-primary/40 mb-2">Step 1</div>
+<h3 class="font-headline font-bold text-lg mb-2 text-primary">Paste the op note</h3>
+<p class="text-sm text-on-surface-variant">Drop the operative note or clinical summary. Any format — the agent reads it all.</p>
+</div>
+<div class="text-center">
+<div class="w-16 h-16 rounded-2xl bg-primary/5 flex items-center justify-center mx-auto mb-4">
+<span class="material-symbols-outlined text-primary text-2xl">fact_check</span>
+</div>
+<div class="text-[10px] font-bold uppercase tracking-widest text-primary/40 mb-2">Step 2</div>
+<h3 class="font-headline font-bold text-lg mb-2 text-primary">Agent identifies requirements</h3>
+<p class="text-sm text-on-surface-variant">Matches the procedure to payer-specific criteria. Pulls relevant clinical necessity language.</p>
+</div>
+<div class="text-center">
+<div class="w-16 h-16 rounded-2xl bg-primary/5 flex items-center justify-center mx-auto mb-4">
+<span class="material-symbols-outlined text-primary text-2xl">description</span>
+</div>
+<div class="text-[10px] font-bold uppercase tracking-widest text-primary/40 mb-2">Step 3</div>
+<h3 class="font-headline font-bold text-lg mb-2 text-primary">Letter drafted. Ready to send.</h3>
+<p class="text-sm text-on-surface-variant">Peer-to-peer-ready. FHIR-compatible. Physician reviews via ClinicalSwipe. Average: 58 seconds.</p>
+</div>
+</div>
+
+<div class="text-center mt-12">
+<div class="inline-flex items-center gap-4 bg-primary/5 rounded-2xl px-8 py-4">
+<div>
+<span class="font-headline text-4xl font-black text-primary">58s</span>
+<span class="text-on-surface-variant text-sm ml-2">average generation</span>
+</div>
+<div class="w-px h-8 bg-primary/10"></div>
+<div>
+<span class="font-headline text-4xl font-black text-on-surface-variant/30 line-through">45min</span>
+<span class="text-on-surface-variant text-sm ml-2">manual process</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+
+<!-- Supported Outcomes -->
+<section class="py-16 px-6 bg-surface-container-low">
+<div class="max-w-5xl mx-auto text-center">
+<p class="text-[10px] font-bold uppercase tracking-[0.2em] text-primary/40 mb-6">Patient-Reported Outcome Measures</p>
+<div class="flex flex-wrap justify-center gap-4">
+<span class="px-4 py-2 rounded-full bg-white text-sm font-bold text-primary">KOOS</span>
+<span class="px-4 py-2 rounded-full bg-white text-sm font-bold text-primary">HOOS</span>
+<span class="px-4 py-2 rounded-full bg-white text-sm font-bold text-primary">QuickDASH</span>
+<span class="px-4 py-2 rounded-full bg-white text-sm font-bold text-primary">ODI</span>
+<span class="px-4 py-2 rounded-full bg-white text-sm font-bold text-primary">PROMIS-10</span>
+<span class="px-4 py-2 rounded-full bg-white text-sm font-bold text-primary">VAS Pain</span>
+<span class="px-4 py-2 rounded-full bg-white text-sm font-bold text-primary">SF-36</span>
+</div>
+<p class="text-xs text-on-surface-variant/50 mt-4">Automated SMS collection. CJR-X quality measures. Baseline + 90-day follow-up.</p>
+</div>
+</section>
+
 <!-- AI Connector Section -->
 <section style="padding:80px 24px;background:#f3f4f5;">
 <div style="max-width:900px;margin:0 auto;">
@@ -535,6 +611,17 @@
 </div>
 </div>
 </section>
+
+<!-- Final CTA -->
+<section class="py-24 px-6 bg-primary text-center">
+<div class="max-w-3xl mx-auto">
+<h2 class="font-headline text-4xl font-extrabold text-white mb-4">Your next patient encounter could be paying for this.</h2>
+<p class="text-primary-fixed/70 text-lg mb-8 max-w-xl mx-auto">One missed TCM code = $230. One month of RTM = $94. One CJR-X episode audit = the difference between shared savings and shared losses. Start with your NPI. See the number.</p>
+<button onclick="document.getElementById('npi-input')?.focus();window.scrollTo({top:0,behavior:'smooth'})" class="bg-white text-primary px-10 py-5 rounded-2xl font-black font-headline text-lg hover:bg-primary-fixed transition-colors cursor-pointer">Show me the money</button>
+<p class="text-white/20 text-xs mt-6">Free. No login. 60 seconds. Built by clinicians, for clinicians.</p>
+</div>
+</section>
+
 </main>
 <!-- Footer -->
 <footer class="bg-slate-50 dark:bg-slate-900 mt-24">
