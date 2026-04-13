@@ -44,8 +44,9 @@ export default function RootLayout({
             navigator.serviceWorker.register('/sw.js');
           }
         `}</Script>
-        <Script src="https://www.solvinghealth.com/chat-widget.js" data-channel="surgeonvalue" data-color="#1B2A4A" strategy="lazyOnload" />
-        <Script src="https://www.solvinghealth.com/voice-embed.js" data-site="surgeonvalue" strategy="lazyOnload" />
+        <Script src="https://harnesshealth.ai/harness.js" strategy="lazyOnload" />
+        <Script src="https://solvinghealth.com/chat-widget.js" data-channel="surgeonvalue" data-color="#1B2A4A" strategy="lazyOnload" />
+        <Script src="https://solvinghealth.com/voice-embed.js" data-site="surgeonvalue" strategy="lazyOnload" />
       </body>
     </html>
   );

@@ -247,7 +247,7 @@ export async function GET(req: NextRequest) {
       parse_error: 502,
     };
     return NextResponse.json(result, {
-      status: statusMap[result.error] || 500,
+      status: statusMap[result.error as string] ?? 500,
     });
   }
 
@@ -284,7 +284,7 @@ export async function POST(req: NextRequest) {
       parse_error: 502,
     };
     return NextResponse.json(result, {
-      status: statusMap[result.error] || 500,
+      status: statusMap[result.error as string] ?? 500,
     });
   }
 

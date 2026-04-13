@@ -276,17 +276,27 @@
 </div>
 </div>
 <div id="agent-carousel" class="flex gap-8 overflow-x-auto no-scrollbar pb-12 px-4" style="-webkit-overflow-scrolling:touch;scroll-snap-type:x mandatory;">
-<!-- Highlighted Agent -->
+<!-- Highlighted Agent: Wonder Bill -->
 <div class="flex-shrink-0 w-80 md:w-[450px] bg-primary p-10 rounded-[2rem] snap-start text-white relative overflow-hidden shadow-2xl">
 <div class="absolute top-0 right-0 p-8 opacity-10">
-<span class="material-symbols-outlined text-[120px]" style="font-variation-settings: 'FILL' 1;">verified_user</span>
+<span class="material-symbols-outlined text-[120px]" style="font-variation-settings: 'FILL' 1;">receipt_long</span>
 </div>
-<span class="inline-block bg-primary-container text-on-primary-container px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest mb-6">Spotlight</span>
-<h3 class="text-3xl font-headline font-bold mb-4">Prior Auth Agent</h3>
-<p class="text-primary-fixed/70 mb-8 leading-relaxed">Paste an op note, get a peer-to-peer-ready letter in 60 seconds. CMS just mandated 24-hour PA decisions with FHIR submission. This agent is built for that.</p>
-<button onclick="document.getElementById('sh-chat-btn')?.click()" class="flex items-center gap-2 font-bold font-headline text-sm group cursor-pointer">
-                        Try it now <span class="material-symbols-outlined group-hover:translate-x-1 transition-transform">arrow_right_alt</span>
+<span class="inline-block bg-primary-container text-on-primary-container px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest mb-6">Lead Feature</span>
+<h3 class="text-3xl font-headline font-bold mb-4">Wonder Bill</h3>
+<p class="text-primary-fixed/70 mb-4 leading-relaxed">"I wonder if I can bill for this." You can. Paste an op note, see every CPT code you qualify for but didn't bill — in 60 seconds. No login, no integration required.</p>
+<p class="text-primary-fixed/50 text-sm mb-8">Most surgeons find $3,000–$8,000 in the first scan.</p>
+<button onclick="document.getElementById('npi-input')?.focus();window.scrollTo({top:0,behavior:'smooth'})" class="flex items-center gap-2 font-bold font-headline text-sm group cursor-pointer">
+                        Run Wonder Bill free <span class="material-symbols-outlined group-hover:translate-x-1 transition-transform">arrow_right_alt</span>
 </button>
+</div>
+<!-- Prior Auth Agent -->
+<div class="flex-shrink-0 w-80 bg-white p-10 rounded-[2rem] snap-start border border-surface-container-highest shadow-sm hover:shadow-xl transition-all">
+<div class="w-12 h-12 bg-tertiary-fixed rounded-xl flex items-center justify-center mb-6">
+<span class="material-symbols-outlined text-tertiary">verified_user</span>
+</div>
+<h3 class="text-xl font-headline font-bold mb-3">Prior Auth Agent</h3>
+<p class="text-on-surface-variant text-sm mb-4 leading-relaxed">Paste an op note. Get a peer-to-peer-ready letter in 60 seconds. CMS mandated 24-hour PA decisions with FHIR submission — this agent is built for that world.</p>
+<button onclick="document.getElementById('sh-chat-btn')?.click()" class="flex items-center gap-2 font-bold font-headline text-xs text-primary group cursor-pointer">Try it <span class="material-symbols-outlined text-base group-hover:translate-x-1 transition-transform">arrow_right_alt</span></button>
 </div>
 <!-- Secondary Agents -->
 <div class="flex-shrink-0 w-80 bg-white p-10 rounded-[2rem] snap-start border border-surface-container-highest shadow-sm hover:shadow-xl transition-all">
@@ -302,13 +312,6 @@
 </div>
 <h3 class="text-xl font-headline font-bold mb-3">Revenue Recovery</h3>
 <p class="text-on-surface-variant text-sm mb-8 leading-relaxed">Predictive underpayment detection across commercial and federal payers.</p>
-</div>
-<div class="flex-shrink-0 w-80 bg-white p-10 rounded-[2rem] snap-start border border-surface-container-highest shadow-sm hover:shadow-xl transition-all">
-<div class="w-12 h-12 bg-tertiary-fixed rounded-xl flex items-center justify-center mb-6">
-<span class="material-symbols-outlined text-tertiary">receipt_long</span>
-</div>
-<h3 class="text-xl font-headline font-bold mb-3">Wonder Bill</h3>
-<p class="text-on-surface-variant text-sm mb-8 leading-relaxed">Paste your op note. See every code you qualify for but didn't bill. 60 seconds. No integration required.</p>
 </div>
 <div class="flex-shrink-0 w-80 bg-white p-10 rounded-[2rem] snap-start border border-surface-container-highest shadow-sm hover:shadow-xl transition-all">
 <div class="w-12 h-12 bg-tertiary-fixed rounded-xl flex items-center justify-center mb-6">
@@ -603,12 +606,27 @@
 <!-- Pricing Section -->
 <section class="py-32 px-6 bg-white">
 <div class="max-w-7xl mx-auto text-center mb-20">
-<h2 class="font-headline text-4xl font-extrabold text-primary mb-4">You only pay when you make money</h2>
-<p class="text-on-surface-variant max-w-lg mx-auto">$20 per encounter. Only when you bill. If Wonder Bill finds nothing, you pay nothing.</p>
+<h2 class="font-headline text-4xl font-extrabold text-primary mb-4">Start free. Pay when you make money.</h2>
+<p class="text-on-surface-variant max-w-xl mx-auto">Run your first Wonder Bill scan at no cost. Upgrade to Core or Pro for full panel intelligence. $20 per encounter only when you bill — if Wonder Bill finds nothing, you owe nothing on encounters.</p>
 </div>
-<div class="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8">
-<!-- Standard -->
-<div class="p-10 rounded-[2rem] border border-surface-container-highest flex flex-col hover:border-primary/20 transition-all group">
+<div class="max-w-7xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+<!-- Free -->
+<div class="p-8 rounded-[2rem] border border-surface-container-highest flex flex-col hover:border-primary/20 transition-all group">
+<h3 class="font-headline font-bold text-xl mb-2">Free</h3>
+<p class="text-sm text-on-surface-variant mb-8">Try Wonder Bill. No credit card, no login.</p>
+<div class="mb-10">
+<span class="text-4xl font-black font-headline">$0</span>
+<span class="text-on-surface-variant">/mo</span>
+</div>
+<ul class="space-y-4 mb-12 flex-1">
+<li class="flex items-center gap-3 text-sm"><span class="material-symbols-outlined text-primary text-lg">check_circle</span> Wonder Bill (first scan)</li>
+<li class="flex items-center gap-3 text-sm"><span class="material-symbols-outlined text-primary text-lg">check_circle</span> NPI revenue estimate</li>
+<li class="flex items-center gap-3 text-sm"><span class="material-symbols-outlined text-primary text-lg">check_circle</span> CJR-X episode snapshot</li>
+</ul>
+<button onclick="document.getElementById('npi-input')?.focus();window.scrollTo({top:0,behavior:'smooth'})" class="w-full py-4 rounded-xl border border-outline-variant font-bold font-headline group-hover:bg-primary group-hover:text-white transition-all cursor-pointer">Start Free</button>
+</div>
+<!-- Core -->
+<div class="p-8 rounded-[2rem] border border-surface-container-highest flex flex-col hover:border-primary/20 transition-all group">
 <h3 class="font-headline font-bold text-xl mb-2">Core</h3>
 <p class="text-sm text-on-surface-variant mb-8">Revenue capture for solo and small group ortho practices.</p>
 <div class="mb-10">
@@ -619,13 +637,14 @@
 <li class="flex items-center gap-3 text-sm"><span class="material-symbols-outlined text-primary text-lg">check_circle</span> 9 AI Agents</li>
 <li class="flex items-center gap-3 text-sm"><span class="material-symbols-outlined text-primary text-lg">check_circle</span> Wonder Bill + Prior Auth</li>
 <li class="flex items-center gap-3 text-sm"><span class="material-symbols-outlined text-primary text-lg">check_circle</span> CJR-X Episode Cost Analysis</li>
+<li class="flex items-center gap-3 text-sm"><span class="material-symbols-outlined text-primary text-lg">check_circle</span> EMR integration (Epic / Cerner / athena)</li>
 </ul>
 <button onclick="document.getElementById('npi-input')?.focus();window.scrollTo({top:0,behavior:'smooth'})" class="w-full py-4 rounded-xl border border-outline-variant font-bold font-headline group-hover:bg-primary group-hover:text-white transition-all cursor-pointer">Start Free Audit</button>
 </div>
-<!-- Care - Spotlighted -->
-<div class="p-1 glass-panel rounded-[2.1rem] bg-gradient-to-br from-primary to-primary-container shadow-2xl relative scale-105 z-10">
+<!-- Pro - Spotlighted -->
+<div class="p-1 glass-panel rounded-[2.1rem] bg-gradient-to-br from-primary to-primary-container shadow-2xl relative z-10">
 <div class="absolute -top-4 left-1/2 -translate-x-1/2 bg-primary-fixed text-on-primary-fixed px-6 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest shadow-lg">Most Recommended</div>
-<div class="bg-white/95 rounded-[2rem] p-10 h-full flex flex-col">
+<div class="bg-white/95 rounded-[2rem] p-8 h-full flex flex-col">
 <h3 class="font-headline font-bold text-xl mb-2 text-primary">Pro</h3>
 <p class="text-sm text-on-surface-variant mb-8">Full revenue intelligence + CJR-X episode optimization.</p>
 <div class="mb-10">
@@ -642,7 +661,7 @@
 </div>
 </div>
 <!-- Enterprise -->
-<div class="p-10 rounded-[2rem] border border-surface-container-highest flex flex-col hover:border-primary/20 transition-all group">
+<div class="p-8 rounded-[2rem] border border-surface-container-highest flex flex-col hover:border-primary/20 transition-all group">
 <h3 class="font-headline font-bold text-xl mb-2">Enterprise</h3>
 <p class="text-sm text-on-surface-variant mb-8">Multi-site ortho groups and health system CJR-X readiness.</p>
 <div class="mb-10">
@@ -652,6 +671,7 @@
 <li class="flex items-center gap-3 text-sm"><span class="material-symbols-outlined text-primary text-lg">check_circle</span> Dedicated AI Cluster</li>
 <li class="flex items-center gap-3 text-sm"><span class="material-symbols-outlined text-primary text-lg">check_circle</span> On-Premise Options</li>
 <li class="flex items-center gap-3 text-sm"><span class="material-symbols-outlined text-primary text-lg">check_circle</span> Tier-1 Security</li>
+<li class="flex items-center gap-3 text-sm"><span class="material-symbols-outlined text-primary text-lg">check_circle</span> Dedicated onboarding &amp; support</li>
 </ul>
 <button onclick="document.getElementById('sh-chat-btn')?.click()" class="w-full py-4 rounded-xl border border-outline-variant font-bold font-headline group-hover:bg-primary group-hover:text-white transition-all cursor-pointer">Talk to Us</button>
 </div>
@@ -675,13 +695,14 @@
 <div class="col-span-2 md:col-span-1">
 <div class="text-lg font-bold text-teal-900 dark:text-teal-100 mb-4 font-headline">SurgeonValue</div>
 <p class="font-['Inter'] text-xs leading-relaxed text-slate-500 max-w-[200px]">
-                    The next evolution in surgical financial operations. Modernizing the clinic for the age of AI.
+                    The AI practice OS for orthopedic surgeons. 9 agents. Revenue intelligence. CJR-X readiness.
                 </p>
 </div>
 <div>
 <h5 class="font-headline font-bold text-sm mb-6 text-primary">Company</h5>
 <ul class="space-y-3">
 <li><a class="font-['Inter'] text-xs text-slate-500 hover:text-teal-600 transition-colors" href="https://solvinghealth.com">SolvingHealth</a></li>
+<li><a class="font-['Inter'] text-xs text-slate-500 hover:text-teal-600 transition-colors" href="https://clinicalswipe.com">ClinicalSwipe</a></li>
 <li><a class="font-['Inter'] text-xs text-slate-500 hover:text-teal-600 transition-colors" href="https://co-op.care">co-op.care</a></li>
 </ul>
 </div>
@@ -690,6 +711,7 @@
 <ul class="space-y-3">
 <li><a class="font-['Inter'] text-xs text-slate-500 hover:text-teal-600 transition-colors" href="/cjr-x">CJR-X Readiness</a></li>
 <li><a class="font-['Inter'] text-xs text-slate-500 hover:text-teal-600 transition-colors" href="/surgeonvalue-the-command-center.html">Agent Dashboard</a></li>
+<li><a class="font-['Inter'] text-xs text-slate-500 hover:text-teal-600 transition-colors" href="https://solvinghealth.com/mcp">MCP Connector</a></li>
 </ul>
 </div>
 <div>
@@ -697,6 +719,7 @@
 <ul class="space-y-3">
 <li><a class="font-['Inter'] text-xs text-slate-500 hover:text-teal-600 transition-colors" href="https://caregoals.com">CareGoals</a></li>
 <li><a class="font-['Inter'] text-xs text-slate-500 hover:text-teal-600 transition-colors" href="https://comfortcard.org">ComfortCard</a></li>
+<li><a class="font-['Inter'] text-xs text-slate-500 hover:text-teal-600 transition-colors" href="https://mapofyou.com">MapOfYou</a></li>
 </ul>
 </div>
 </div>
@@ -704,6 +727,6 @@
 <p class="font-['Inter'] text-xs text-slate-500">© 2026 SurgeonValue by SolvingHealth LLC. Physician-governed AI. HIPAA Compliant.</p>
 </div>
 </footer>
-<script src="https://www.solvinghealth.com/chat-widget.js" data-channel="surgeonvalue" data-color="#003536" defer></script>
-<script src="https://www.solvinghealth.com/voice-embed.js" data-site="surgeonvalue" defer></script>
+<script src="https://solvinghealth.com/chat-widget.js" data-channel="surgeonvalue" data-color="#003536" defer></script>
+<script src="https://solvinghealth.com/voice-embed.js" data-site="surgeonvalue" defer></script>
 </body></html>
