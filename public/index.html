@@ -148,7 +148,7 @@
                     Enter your NPI. See your missed revenue estimate. No signup, no credit card, no demo. Just the number.
                 </p>
 <!-- NPI Lookup -->
-<form id="npi-form" onsubmit="event.preventDefault();var npi=document.getElementById('npi-input').value.trim();if(npi.length>=5){var btn=this.querySelector('button');btn.textContent='Analyzing...';btn.disabled=true;fetch('/api/npi?npi='+encodeURIComponent(npi)).then(r=>r.json()).then(d=>{if(d.error){btn.textContent='Show me the money';btn.disabled=false;alert(d.error)}else{window.location.href='/cjr-x?npi='+encodeURIComponent(npi)+'&name='+encodeURIComponent(d.provider?.name||'')+'&estimate='+encodeURIComponent(d.revenue_estimate?.estimated_annual_recovery||'')}}).catch(()=>{btn.textContent='Show me the money';btn.disabled=false;window.location.href='/cjr-x?npi='+encodeURIComponent(npi)})}else{document.getElementById('npi-input').placeholder='Enter a valid NPI...'}" class="bg-white/10 backdrop-blur-xl p-2 rounded-2xl max-w-2xl mx-auto flex items-center shadow-2xl border border-white/10">
+<form id="npi-form" onsubmit="event.preventDefault();var npi=document.getElementById('npi-input').value.trim();if(/^\d{10}$/.test(npi)){window.location.href='/npi/'+encodeURIComponent(npi)}else{var inp=document.getElementById('npi-input');inp.placeholder='Enter a valid 10-digit NPI';inp.style.outline='2px solid #ef4444'}" class="bg-white/10 backdrop-blur-xl p-2 rounded-2xl max-w-2xl mx-auto flex items-center shadow-2xl border border-white/10">
 <div class="flex-1 px-4 flex items-center gap-3">
 <span class="material-symbols-outlined text-white/50" aria-hidden="true">search</span>
 <label for="npi-input" class="sr-only">NPI number</label>
