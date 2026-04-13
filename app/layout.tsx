@@ -44,8 +44,6 @@ export default function RootLayout({
             navigator.serviceWorker.register('/sw.js');
           }
         `}</Script>
-        <Script src="https://solvinghealth.com/widgets/sage-chat.js?channel=surgeonvalue" strategy="lazyOnload" />
-        <Script src="https://solvinghealth.com/widgets/gemini-voice.js?site=surgeonvalue" strategy="lazyOnload" />
         <Script src="https://solvinghealth.com/footer.js" data-brand="surgeonvalue" data-theme="dark" strategy="lazyOnload" />
       </body>
     </html>
