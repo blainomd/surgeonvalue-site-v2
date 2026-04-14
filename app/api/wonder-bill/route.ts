@@ -9,36 +9,41 @@ export const dynamic = "force-dynamic";
 
 const SYSTEM_FRAMING = `You are Wonder Bill, an orthopedic billing expert using 2026 Medicare rules.
 
-Analyze the clinical note below. Identify ONLY documented-but-unbilled revenue opportunities — work the surgeon already did and documented in the note but is NOT currently billing for. Do not suggest codes the documentation cannot support.
+Analyze the clinical note below. Identify documented-but-unbilled revenue opportunities. Do NOT suggest codes the documentation cannot support. If the note is a 90-day post-op global period visit, most E/M is bundled — call that out explicitly in global_period_flag.
 
-Common categories to look for: G2211 (longitudinal visit complexity), TCM 99495/99496, CCM 99490/99491, BHI 99492/99493, RTM 98975-98977, PCM 99426/99427, prolonged services 99417, complex MDM upcodes, injection/procedure add-ons (20610, 20611, 99070 supply), modifier-25 when separately identifiable, care coordination time.
+Categories to scan: G2211, TCM 99495/96, CCM 99490/91, BHI 99492/93, RTM 98975-77, PCM 99426/27, prolonged 99417, MDM complexity, procedure add-ons (20610/11), modifier-25 distinct services.
 
-CRITICAL: If the note is a global-period post-op visit (90-day global for major joints), most E/M is NOT separately billable. Catch that and call it out.
+RULES — RESPOND WITH VALID JSON ONLY. NO MARKDOWN. NO PROSE. BE EXTREMELY TERSE.
+- Max 4 line_items (pick the 4 highest-confidence opportunities)
+- rule_brief: max 25 words
+- risk_reason: max 15 words
+- biller_note: max 12 words
+- code_description: max 8 words
+- cited_sentence: copy exact phrase from note, ≤ 20 words
+- Use real 2026 Medicare non-facility allowables
+- If note is a global period visit and nothing is separately billable, return empty line_items with global_period_flag set and explain in note_summary
 
-Return ONLY valid JSON in this exact schema (no prose, no markdown fences):
-
+Schema:
 {
-  "note_summary": "one-sentence clinical summary",
-  "global_period_flag": "none | post-op-global-active | unclear",
+  "note_summary": "one sentence",
+  "global_period_flag": "none" | "post-op-global-active" | "unclear",
   "line_items": [
     {
-      "cited_sentence": "exact phrase from the note that documents the work",
-      "cpt_code": "code",
-      "code_description": "short description",
-      "rule_brief": "why this code applies based on the cited documentation",
-      "medicare_allowable_dollars": 0,
-      "annual_impact_estimate": 0,
-      "compliance_risk": "low | medium | high",
-      "risk_reason": "one sentence",
-      "biller_note": "one-line instruction for the billing team"
+      "cited_sentence": "string",
+      "cpt_code": "string",
+      "code_description": "string",
+      "rule_brief": "string",
+      "medicare_allowable_dollars": number,
+      "annual_impact_estimate": number,
+      "compliance_risk": "low" | "medium" | "high",
+      "risk_reason": "string",
+      "biller_note": "string"
     }
   ],
-  "total_visit_dollars": 0,
-  "total_annual_impact": 0,
-  "biller_ready_summary": "plain-text block the surgeon can copy-paste to their biller"
-}
-
-Maximum 6 line items. Do not invent dollar values — use 2026 Medicare non-facility allowables. If the note is too short or vague to analyze meaningfully, return an empty line_items array with note_summary explaining what's missing.`;
+  "total_visit_dollars": number,
+  "total_annual_impact": number,
+  "biller_ready_summary": "terse plaintext biller instructions, max 400 chars"
+}`;
 
 interface WonderBillRequest {
   note: string;
@@ -102,15 +107,79 @@ export async function POST(req: NextRequest) {
     jsonText = jsonText.slice(firstBrace, lastBrace + 1);
   }
 
+  // Try direct parse
   try {
     const parsed = JSON.parse(jsonText);
     return NextResponse.json({ ok: true, result: parsed });
   } catch {
-    // Return the raw answer as a fallback — UI will render as prose
+    // Upstream may have truncated mid-object. Try to repair by keeping only
+    // the complete line_items we got and closing the JSON.
+    const repaired = tryRepairTruncated(jsonText);
+    if (repaired) {
+      try {
+        const parsed = JSON.parse(repaired);
+        return NextResponse.json({ ok: true, result: parsed, repaired: true });
+      } catch {
+        /* fall through */
+      }
+    }
     return NextResponse.json({
       ok: true,
       result: null,
       fallback_text: raw,
     });
   }
+}
+
+// Close a truncated JSON object by:
+// 1. Finding the last complete `}` inside the line_items array
+// 2. Truncating the string at that position + 1
+// 3. Closing the array and top-level object
+function tryRepairTruncated(jsonText: string): string | null {
+  const lineItemsStart = jsonText.indexOf('"line_items"');
+  if (lineItemsStart === -1) return null;
+
+  const arrayStart = jsonText.indexOf("[", lineItemsStart);
+  if (arrayStart === -1) return null;
+
+  // Walk forward tracking brace depth. Record position of each completed
+  // top-level object inside the array.
+  let depth = 0;
+  let inString = false;
+  let escape = false;
+  let lastCompleteObjectEnd = -1;
+
+  for (let i = arrayStart + 1; i < jsonText.length; i++) {
+    const ch = jsonText[i];
+    if (escape) {
+      escape = false;
+      continue;
+    }
+    if (ch === "\\") {
+      escape = true;
+      continue;
+    }
+    if (ch === '"') {
+      inString = !inString;
+      continue;
+    }
+    if (inString) continue;
+    if (ch === "{") depth++;
+    else if (ch === "}") {
+      depth--;
+      if (depth === 0) lastCompleteObjectEnd = i;
+    } else if (ch === "]" && depth === 0) {
+      // Array closed naturally — no repair needed here, reparse would have worked
+      return null;
+    }
+  }
+
+  if (lastCompleteObjectEnd === -1) {
+    // No complete line_items — return empty array
+    const head = jsonText.slice(0, arrayStart + 1);
+    return `${head}], "total_visit_dollars": 0, "total_annual_impact": 0, "biller_ready_summary": "Response truncated. Re-run with a shorter note."}`;
+  }
+
+  const head = jsonText.slice(0, lastCompleteObjectEnd + 1);
+  return `${head}], "total_visit_dollars": 0, "total_annual_impact": 0, "biller_ready_summary": "Paste the 4 line items above into your billing system."}`;
 }
