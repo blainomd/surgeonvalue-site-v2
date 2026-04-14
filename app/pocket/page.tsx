@@ -938,6 +938,25 @@ export default function PocketPage() {
                 {queue.length} · {dollarFmt(queueTotal)}
               </button>
             )}
+            <a
+              href="/me"
+              aria-label="Your data"
+              title="What Pocket knows about you"
+              style={{
+                background: "transparent",
+                border: "1px solid rgba(232,237,242,0.15)",
+                color: textMuted,
+                fontSize: 11,
+                fontWeight: 800,
+                padding: "7px 10px",
+                borderRadius: 8,
+                cursor: "pointer",
+                textDecoration: "none",
+                letterSpacing: "0.05em",
+              }}
+            >
+              My data
+            </a>
             <button
               onClick={() => setShowPowerTabs(!showPowerTabs)}
               aria-label="More tools"

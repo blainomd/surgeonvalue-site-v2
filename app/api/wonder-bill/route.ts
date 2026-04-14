@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { stripPhi } from "@/lib/phi-strip";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -75,13 +76,18 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  const note = (body.note || "").trim();
-  if (!note) {
+  const rawNote = (body.note || "").trim();
+  if (!rawNote) {
     return NextResponse.json({ error: "Note is required" }, { status: 400 });
   }
-  if (note.length > 8000) {
+  if (rawNote.length > 8000) {
     return NextResponse.json({ error: "Note too long (8000 char max)" }, { status: 400 });
   }
+
+  // Strip obvious identifiers BEFORE the note hits the upstream Claude API.
+  // Defense-in-depth: the downstream prompt also instructs PHI-stripping,
+  // but we want the identifiers gone before they leave our server.
+  const { clean: note } = stripPhi(rawNote);
 
   const message = `${SYSTEM_FRAMING}\n\nCLINICAL_NOTE:\n\n${note}`;
 
@@ -96,17 +102,11 @@ export async function POST(req: NextRequest) {
       }),
     });
   } catch (err) {
-    return NextResponse.json(
-      { error: "Could not reach billing engine", detail: String(err) },
-      { status: 502 }
-    );
+    return NextResponse.json({ error: "Could not reach billing engine", detail: String(err) }, { status: 502 });
   }
 
   if (!upstream.ok) {
-    return NextResponse.json(
-      { error: `Billing engine returned ${upstream.status}` },
-      { status: 502 }
-    );
+    return NextResponse.json({ error: `Billing engine returned ${upstream.status}` }, { status: 502 });
   }
 
   type UpstreamResponse = { answer?: string; reply?: string; response?: string };
@@ -143,11 +143,7 @@ export async function POST(req: NextRequest) {
   }
 
   if (!parsed || typeof parsed !== "object") {
-    return NextResponse.json({
-      ok: true,
-      result: null,
-      fallback_text: raw,
-    });
+    return NextResponse.json({ ok: true, result: null, fallback_text: raw });
   }
 
   // Normalize — compute totals from line_items and regenerate biller summary

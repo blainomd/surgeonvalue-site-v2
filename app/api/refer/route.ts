@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { lookupNpi } from "@/app/api/npi/route";
+import { stripPhi } from "@/lib/phi-strip";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -162,13 +163,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  const patientContext = (body.patient_context || "").trim();
-  if (patientContext.length < 15) {
+  const rawContext = (body.patient_context || "").trim();
+  if (rawContext.length < 15) {
     return NextResponse.json({ error: "Patient context too short" }, { status: 400 });
   }
-  if (patientContext.length > 4000) {
+  if (rawContext.length > 4000) {
     return NextResponse.json({ error: "Patient context too long" }, { status: 400 });
   }
+
+  // Strip obvious identifiers before the context hits upstream / NPPES search
+  const { clean: patientContext } = stripPhi(rawContext);
 
   const taxonomy = inferSpecialtyKeyword(body.specialty_hint || "", patientContext);
   const state = (body.state || "").trim();

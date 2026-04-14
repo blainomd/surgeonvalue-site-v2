@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { stripPhi } from "@/lib/phi-strip";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -63,7 +64,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  const question = (body.question || "").trim();
+  const rawQuestion = (body.question || "").trim();
+  // PHI strip before the question is passed to upstream
+  const question = stripPhi(rawQuestion).clean;
   if (!question) {
     return NextResponse.json({ error: "Question required" }, { status: 400 });
   }

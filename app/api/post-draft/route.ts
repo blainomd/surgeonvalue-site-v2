@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { stripPhi } from "@/lib/phi-strip";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -68,7 +69,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  const observation = (body.observation || "").trim();
+  const rawObservation = (body.observation || "").trim();
+  // PHI strip BEFORE the observation hits the model — post drafts should
+  // never contain patient identifiers even in the input phase.
+  const observation = stripPhi(rawObservation).clean;
   if (observation.length < 15) {
     return NextResponse.json({ error: "Observation too short" }, { status: 400 });
   }

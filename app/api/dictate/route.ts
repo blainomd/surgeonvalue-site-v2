@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { stripPhi } from "@/lib/phi-strip";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -110,7 +111,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  const text = (body.text || "").trim();
+  const rawText = (body.text || "").trim();
+  // PHI strip before routing to any downstream
+  const text = stripPhi(rawText).clean;
   if (text.length < 5) {
     return NextResponse.json({ error: "Input too short" }, { status: 400 });
   }

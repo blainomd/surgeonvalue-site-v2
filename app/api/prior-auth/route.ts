@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { stripPhi } from "@/lib/phi-strip";
 import {
   getPriorAuthAgentConfig,
   findDenialPatterns,
@@ -22,7 +23,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  const clinicalNote = (body.clinicalNote || "").trim();
+  const rawClinicalNote = (body.clinicalNote || "").trim();
+  // PHI strip before the note is passed to NPPES search + upstream Claude
+  const clinicalNote = stripPhi(rawClinicalNote).clean;
   const procedure = (body.procedure || "").trim();
   const payerName = (body.payerName || "").trim();
 
