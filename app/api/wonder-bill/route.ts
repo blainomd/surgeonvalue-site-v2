@@ -108,27 +108,98 @@ export async function POST(req: NextRequest) {
   }
 
   // Try direct parse
+  let parsed: unknown = null;
+  let repaired = false;
   try {
-    const parsed = JSON.parse(jsonText);
-    return NextResponse.json({ ok: true, result: parsed });
+    parsed = JSON.parse(jsonText);
   } catch {
-    // Upstream may have truncated mid-object. Try to repair by keeping only
-    // the complete line_items we got and closing the JSON.
-    const repaired = tryRepairTruncated(jsonText);
-    if (repaired) {
+    const repairedText = tryRepairTruncated(jsonText);
+    if (repairedText) {
       try {
-        const parsed = JSON.parse(repaired);
-        return NextResponse.json({ ok: true, result: parsed, repaired: true });
+        parsed = JSON.parse(repairedText);
+        repaired = true;
       } catch {
         /* fall through */
       }
     }
+  }
+
+  if (!parsed || typeof parsed !== "object") {
     return NextResponse.json({
       ok: true,
       result: null,
       fallback_text: raw,
     });
   }
+
+  // Normalize — compute totals from line_items and regenerate biller summary
+  // if they're missing (truncation) or zero.
+  const normalized = normalizeResult(parsed as Record<string, unknown>);
+  return NextResponse.json({ ok: true, result: normalized, repaired });
+}
+
+type LineItemShape = {
+  cited_sentence?: string;
+  cpt_code?: string;
+  code_description?: string;
+  rule_brief?: string;
+  medicare_allowable_dollars?: number;
+  annual_impact_estimate?: number;
+  compliance_risk?: string;
+  risk_reason?: string;
+  biller_note?: string;
+};
+
+function normalizeResult(input: Record<string, unknown>): Record<string, unknown> {
+  const items = Array.isArray(input.line_items) ? (input.line_items as LineItemShape[]) : [];
+
+  const totalVisit = items.reduce(
+    (sum, it) => sum + (typeof it.medicare_allowable_dollars === "number" ? it.medicare_allowable_dollars : 0),
+    0
+  );
+  const totalAnnual = items.reduce(
+    (sum, it) => sum + (typeof it.annual_impact_estimate === "number" ? it.annual_impact_estimate : 0),
+    0
+  );
+
+  // If upstream produced totals that match computed totals, keep them.
+  // If upstream totals are 0/missing (truncation), use computed.
+  const existingVisit = typeof input.total_visit_dollars === "number" ? input.total_visit_dollars : 0;
+  const existingAnnual = typeof input.total_annual_impact === "number" ? input.total_annual_impact : 0;
+  const useComputedVisit = existingVisit === 0 && totalVisit > 0;
+  const useComputedAnnual = existingAnnual === 0 && totalAnnual > 0;
+
+  // Regenerate biller summary if missing or placeholder
+  const existingSummary = typeof input.biller_ready_summary === "string" ? input.biller_ready_summary : "";
+  const summaryLooksPlaceholder =
+    !existingSummary ||
+    existingSummary.length < 40 ||
+    existingSummary.toLowerCase().includes("paste the 4 line items") ||
+    existingSummary.toLowerCase().includes("response truncated");
+
+  let billerSummary = existingSummary;
+  if (summaryLooksPlaceholder && items.length > 0) {
+    const lines = items
+      .map((it) => {
+        const code = it.cpt_code || "";
+        const dollars = typeof it.medicare_allowable_dollars === "number" ? it.medicare_allowable_dollars : 0;
+        const note = it.biller_note || it.code_description || "";
+        return `${code} — $${dollars.toFixed(2)}${note ? ` — ${note}` : ""}`;
+      })
+      .filter(Boolean);
+    billerSummary = `Wonder Bill opportunities for this encounter:\n\n${lines.join("\n")}\n\nVerify documentation and MDM before submission.`;
+  } else if (summaryLooksPlaceholder && items.length === 0) {
+    billerSummary =
+      "No separately billable opportunities found. If this is a global-period visit, the work is bundled into the surgical global fee.";
+  }
+
+  return {
+    ...input,
+    line_items: items,
+    total_visit_dollars: useComputedVisit ? totalVisit : existingVisit || totalVisit,
+    total_annual_impact: useComputedAnnual ? totalAnnual : existingAnnual || totalAnnual,
+    biller_ready_summary: billerSummary,
+  };
 }
 
 // Close a truncated JSON object by:
