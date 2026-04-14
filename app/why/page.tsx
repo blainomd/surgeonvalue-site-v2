@@ -15,10 +15,10 @@ export const metadata: Metadata = {
 };
 
 const NUMBERS = [
-  { big: "9", label: "AI agents in one platform", sub: "Cost estimates are one of nine — not the whole product." },
-  { big: "$240K", label: "Average annual revenue per surgeon left on the table", sub: "From missed billable codes, not aggressive upcoding." },
-  { big: "91%", label: "Pre-payment collection benchmark", sub: "Match the best orthopedic groups in the country." },
-  { big: "~3 min", label: "Per encounter, end-to-end", sub: "From note → codes → prior auth → referral — without a financial counselor." },
+  { big: "70%", label: "of health systems want ONE AI partner", sub: "From Qventus' 2026 survey of 60+ CIOs. Only 11% currently have one. SurgeonValue is the one." },
+  { big: "9", label: "AI agents in one login", sub: "Wonder Bill, Prior Auth, Pocket, Coding Audit, Revenue Recovery, Episode Cost, PROM, RTM/CCM, Panel Intelligence." },
+  { big: "0 min", label: "EHR integration timeline", sub: "75% of health systems are blocked on AI by their EHR vendor. SurgeonValue runs NPI-only — bypass the bottleneck." },
+  { big: "$240K", label: "Annual missed revenue per surgeon", sub: "Wonder Bill finds the codes your EHR template skipped. Measurable ROI in dollars, not adjectives." },
 ];
 
 const AGENTS = [
@@ -127,10 +127,10 @@ export default function WhyPage() {
             maxWidth: "920px",
           }}
         >
-          Nine agents where<br />
-          <span style={{ color: THEME.teal, fontStyle: "italic" }}>cost estimators</span>
+          You said you wanted<br />
+          <span style={{ color: THEME.teal, fontStyle: "italic" }}>one AI partner</span>.
           <br />
-          have one.
+          Here it is.
         </h1>
         <p
           style={{
@@ -141,14 +141,16 @@ export default function WhyPage() {
             marginBottom: "48px",
           }}
         >
-          Health Here's Q Code gives you cost estimates. It works — 91% pre-payment
-          collection, 4 FTEs reduced to 1.5, CEO quotes in case studies. Good product.
+          Qventus surveyed 60+ health system CIOs in 2026. The answer was unambiguous:
+          <strong style={{ color: THEME.text }}> 70% want one comprehensive AI partner.
+          Only 11% have one.</strong> 75% are blocked on AI adoption by their EHR vendor's
+          timeline. 39% can't measure AI ROI at all.
           <br /><br />
-          SurgeonValue gives you <strong style={{ color: THEME.text }}>nine AI agents</strong>,
-          one of which does cost estimation. The other eight catch the codes your EHR
-          template misses, draft prior auths in 60 seconds, hand patients a tap-to-refer
-          rail, collect PROMs by voice, track episode costs against CJR-X targets, and
-          run a physician attestation layer that's OIG audit-defensible.
+          SurgeonValue is the one AI partner. <strong style={{ color: THEME.text }}>Nine
+          agents, one login, measurable ROI in dollars, zero EHR integration required.</strong>
+          {" "}Enter your NPI, profile live in 10 seconds. No athenahealth project, no
+          Epic app marketplace submission, no 12-month rollout. The EHR bottleneck that
+          blocks 75% of health systems? We bypass it by design.
         </p>
         <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
           <a
