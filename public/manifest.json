@@ -1,11 +1,30 @@
 {
-  "name": "SurgeonValue",
+  "name": "SurgeonValue — Pocket",
   "short_name": "SurgeonValue",
-  "start_url": "/",
+  "description": "Voice-to-code billing capture for surgeons. Between cases, not after hours.",
+  "start_url": "/pocket",
+  "scope": "/",
   "display": "standalone",
-  "theme_color": "#1B2A4A",
-  "background_color": "#FFFFFF",
+  "orientation": "portrait",
+  "theme_color": "#001a1b",
+  "background_color": "#001a1b",
   "icons": [
-    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml" }
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "/apple-icon.png", "sizes": "400x400", "type": "image/png", "purpose": "any maskable" }
+  ],
+  "categories": ["medical", "productivity"],
+  "shortcuts": [
+    {
+      "name": "New voice note",
+      "short_name": "Record",
+      "url": "/pocket?mic=1",
+      "description": "Record an encounter and capture codes"
+    },
+    {
+      "name": "My queue",
+      "short_name": "Queue",
+      "url": "/pocket?view=queue",
+      "description": "Review pending encounters and email biller"
+    }
   ]
 }
