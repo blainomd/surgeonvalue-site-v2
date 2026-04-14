@@ -153,6 +153,17 @@ type ReferralResult = {
 const QUEUE_KEY = "sv_pocket_queue_v1";
 const BILLER_EMAIL_KEY = "sv_pocket_biller_email_v1";
 
+// Queue items auto-expire 24h after capture so PHI doesn't sit on the device
+// indefinitely. The localStorage queue is meant to be ephemeral end-of-day capture.
+const QUEUE_TTL_MS = 24 * 60 * 60 * 1000;
+const purgeExpiredQueue = (queue: QueuedEncounter[]): QueuedEncounter[] => {
+  const cutoff = Date.now() - QUEUE_TTL_MS;
+  return queue.filter((q) => {
+    const ts = new Date(q.timestamp).getTime();
+    return Number.isFinite(ts) && ts >= cutoff;
+  });
+};
+
 // ─── Utilities ──────────────────────────────────────────────────────────────
 
 const dollarFmt = (n: number | undefined) =>
@@ -248,7 +259,19 @@ export default function PocketPage() {
   useEffect(() => {
     try {
       const raw = localStorage.getItem(QUEUE_KEY);
-      if (raw) setQueue(JSON.parse(raw));
+      if (raw) {
+        const parsed = JSON.parse(raw) as QueuedEncounter[];
+        const fresh = purgeExpiredQueue(parsed);
+        setQueue(fresh);
+        // Persist the cleaned version back so expired items are actually gone
+        if (fresh.length !== parsed.length) {
+          try {
+            localStorage.setItem(QUEUE_KEY, JSON.stringify(fresh));
+          } catch {
+            /* ignore quota */
+          }
+        }
+      }
       const email = localStorage.getItem(BILLER_EMAIL_KEY);
       if (email) setBillerEmail(email);
     } catch {
@@ -1517,10 +1540,10 @@ export default function PocketPage() {
                   background: "linear-gradient(135deg, rgba(140,21,21,0.12), rgba(148,209,211,0.04))",
                   border: "1px solid rgba(140,21,21,0.4)",
                   borderRadius: 12,
-                  padding: "12px 16px",
+                  padding: "14px 16px",
                   marginBottom: 16,
                   display: "flex",
-                  alignItems: "center",
+                  alignItems: "flex-start",
                   gap: 12,
                 }}
               >
@@ -1532,6 +1555,7 @@ export default function PocketPage() {
                     background: accent,
                     boxShadow: `0 0 12px ${accent}`,
                     flexShrink: 0,
+                    marginTop: 6,
                   }}
                 />
                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -1545,13 +1569,16 @@ export default function PocketPage() {
                       marginBottom: 2,
                     }}
                   >
-                    Routed to
+                    Your network preference
                   </p>
                   <p style={{ fontSize: 13, color: textMain, fontWeight: 700 }}>
                     {preferredDestination.display_name}
                   </p>
-                  <p style={{ fontSize: 11, color: textMuted }}>
+                  <p style={{ fontSize: 11, color: textMuted, marginBottom: 6 }}>
                     {preferredDestination.practice} · {preferredDestination.specialty}
+                  </p>
+                  <p style={{ fontSize: 10, color: "rgba(232,237,242,0.55)", lineHeight: 1.5 }}>
+                    You arrived here from this surgeon&apos;s network. They&apos;ll be pinned at the top of matches when surgical eval applies. Other matched providers from CMS NPPES appear below.
                   </p>
                 </div>
               </div>
@@ -2001,7 +2028,7 @@ export default function PocketPage() {
         {/* ─── QUEUE ────────────────────────────────────────────────────── */}
         {mode === "queue" && (
           <>
-            <ModeHeader title="Today's queue" sub="Encounters captured today, ready to send to your biller." accent={accent} muted={textMuted} />
+            <ModeHeader title="Today's queue" sub="" accent={accent} muted={textMuted} />
             <div
               style={{
                 background: "rgba(148,209,211,0.06)",
@@ -2016,7 +2043,7 @@ export default function PocketPage() {
                 {dollarFmt(queueTotal)}
               </p>
               <p style={{ fontSize: 12, color: textMuted, marginTop: 4 }}>
-                {queue.length} encounter{queue.length !== 1 ? "s" : ""}
+                {queue.length} encounter{queue.length !== 1 ? "s" : ""} · auto-clears after 24 hours
               </p>
             </div>
             <div style={{ marginBottom: 14 }}>
