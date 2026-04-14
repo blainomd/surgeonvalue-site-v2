@@ -284,7 +284,9 @@ export default function PocketPage() {
     setVoiceTarget(null);
   };
 
-  // ── Code (Wonder Bill) submit ───────────────────────────────────────────
+  // ── Code (Wonder Bill) submit — fans out to social drafts in parallel ──
+  // One dictation, two outputs: billing codes AND polished posts. Surgeon
+  // gets both from the same 30-second voice clip without re-recording.
   const submitCode = async () => {
     const text = codeTranscript.trim();
     if (text.length < 20) {
@@ -292,23 +294,55 @@ export default function PocketPage() {
       return;
     }
     setCodeLoading(true);
+    setShareLoading(true);
     setError(null);
     setCodeResult(null);
-    try {
-      const res = await fetch("/api/wonder-bill", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ note: text }),
-      });
-      const data = await res.json();
-      if (!data.ok) setError(data.error || "Analysis failed.");
-      else if (data.result) setCodeResult(data.result);
-      else setError("No result. Try a longer dictation.");
-    } catch {
-      setError("Network error. Try again.");
-    } finally {
-      setCodeLoading(false);
-    }
+    setShareResult(null);
+    setShareCopied(null);
+
+    // Fire both in parallel — codes return first usually, drafts a moment after
+    const codePromise = fetch("/api/wonder-bill", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ note: text }),
+    })
+      .then((r) => r.json())
+      .then((data) => {
+        if (!data.ok) {
+          setError((prev) => prev || data.error || "Code analysis failed.");
+        } else if (data.result) {
+          setCodeResult(data.result);
+        } else {
+          setError((prev) => prev || "No codes returned. Try a longer dictation.");
+        }
+      })
+      .catch(() => {
+        setError((prev) => prev || "Network error on codes.");
+      })
+      .finally(() => setCodeLoading(false));
+
+    // Build a thought-leadership observation from the same clinical note.
+    // The post drafter strips PHI, so passing the clinical note directly is fine.
+    const sharePromise = fetch("/api/post-draft", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        observation: `From an encounter today: ${text}`,
+      }),
+    })
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.ok && data.result) {
+          setShareResult(data.result);
+        }
+        // If draft fails silently, we still show the codes — drafts are bonus, not blocking
+      })
+      .catch(() => {
+        /* silent — codes are the priority */
+      })
+      .finally(() => setShareLoading(false));
+
+    await Promise.allSettled([codePromise, sharePromise]);
   };
 
   const saveCodeToQueue = () => {
@@ -682,14 +716,19 @@ export default function PocketPage() {
         {/* ─── CODE (Wonder Bill) ───────────────────────────────────────── */}
         {mode === "code" && (
           <>
-            <ModeHeader title="Capture codes" sub="Dictate the encounter. Wonder Bill returns documented-but-unbilled CPT codes." accent={accent} muted={textMuted} />
+            <ModeHeader
+              title="Dictate to agentic health"
+              sub="Speak between cases or paste from your EMR. One input fans out to billing codes, polished posts, and more — all PHI-stripped."
+              accent={accent}
+              muted={textMuted}
+            />
             <div style={{ display: "flex", justifyContent: "center", marginBottom: 18 }}>
               <VoiceButton target="code" />
             </div>
             <textarea
               value={codeTranscript}
               onChange={(e) => setCodeTranscript(e.target.value)}
-              placeholder="Or type the note here..."
+              placeholder="Or paste from your EMR. Until EMR integration ships, copy-paste is the bridge."
               rows={5}
               style={fieldStyle()}
             />
@@ -701,10 +740,26 @@ export default function PocketPage() {
                 style={{ ...fieldStyle(), marginTop: 10, fontSize: 13 }}
               />
             )}
-            {codeTranscript && !codeResult && (
+            {codeTranscript && !codeResult && !codeLoading && (
               <button onClick={submitCode} disabled={codeLoading} style={primaryBtn(codeLoading, accent, bg)}>
-                {codeLoading ? "Reading the note…" : "Find the codes →"}
+                Generate everything →
               </button>
+            )}
+            {codeLoading && (
+              <div
+                style={{
+                  marginTop: 16,
+                  padding: "14px 18px",
+                  background: "rgba(148,209,211,0.06)",
+                  border: "1px solid rgba(148,209,211,0.2)",
+                  borderRadius: 12,
+                  color: textMuted,
+                  fontSize: 13,
+                  textAlign: "center",
+                }}
+              >
+                Reading the note · finding codes · drafting your post…
+              </div>
             )}
 
             {codeResult && (
@@ -717,14 +772,17 @@ export default function PocketPage() {
                 {codeResult.global_period_flag === "post-op-global-active" && (
                   <GlobalPeriodWarning />
                 )}
+
+                <p style={sectionLabel(accent)}>Billing codes</p>
                 <TotalCard label="This visit" value={dollarFmt(codeResult.total_visit_dollars)} accent={accent} />
                 {(codeResult.line_items || []).map((item, i) => (
                   <CodeCard key={i} item={item} accent={accent} muted={textMuted} />
                 ))}
-                <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
+                <div style={{ display: "flex", gap: 10, marginTop: 14, marginBottom: 24 }}>
                   <button
                     onClick={() => {
                       setCodeResult(null);
+                      setShareResult(null);
                       setCodeTranscript("");
                       setPatientLabel("");
                     }}
@@ -733,9 +791,121 @@ export default function PocketPage() {
                     Discard
                   </button>
                   <button onClick={saveCodeToQueue} style={{ ...primaryBtn(false, accent, bg), flex: 2, marginTop: 0 }}>
-                    Save to queue →
+                    Save codes to queue →
                   </button>
                 </div>
+
+                {/* ── Fan-out: social drafts from the SAME dictation ── */}
+                {(shareLoading || shareResult) && (
+                  <>
+                    <p style={{ ...sectionLabel(accent), marginTop: 8 }}>Posts from the same dictation</p>
+                    {shareLoading && !shareResult && (
+                      <div
+                        style={{
+                          padding: "14px 18px",
+                          background: "rgba(148,209,211,0.04)",
+                          border: "1px solid rgba(148,209,211,0.15)",
+                          borderRadius: 12,
+                          color: textMuted,
+                          fontSize: 12,
+                          textAlign: "center",
+                          marginBottom: 12,
+                        }}
+                      >
+                        Drafting your X and LinkedIn posts…
+                      </div>
+                    )}
+                    {shareResult?.x_draft?.text && (
+                      <div
+                        style={{
+                          background: "rgba(148,209,211,0.06)",
+                          border: "1px solid rgba(148,209,211,0.2)",
+                          borderRadius: 12,
+                          padding: "16px 18px",
+                          marginBottom: 10,
+                        }}
+                      >
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                          <p style={sectionLabel(accent)}>For X / Twitter</p>
+                          <button
+                            onClick={() => copyDraft("x")}
+                            style={{
+                              background: shareCopied === "x" ? "#16a34a" : "#003536",
+                              color: shareCopied === "x" ? "#fff" : accent,
+                              border: "1px solid rgba(148,209,211,0.25)",
+                              padding: "6px 12px",
+                              borderRadius: 6,
+                              fontSize: 11,
+                              fontWeight: 800,
+                              cursor: "pointer",
+                            }}
+                          >
+                            {shareCopied === "x" ? "Copied" : "Copy"}
+                          </button>
+                        </div>
+                        <p style={{ fontSize: 13, color: textMain, lineHeight: 1.55, whiteSpace: "pre-wrap", marginBottom: 6 }}>
+                          {shareResult.x_draft.text}
+                        </p>
+                        {shareResult.x_draft.char_count !== undefined && (
+                          <p style={{ fontSize: 10, color: textMuted }}>
+                            {shareResult.x_draft.char_count} / 280 characters
+                          </p>
+                        )}
+                      </div>
+                    )}
+                    {shareResult?.linkedin_draft?.text && (
+                      <div
+                        style={{
+                          background: "rgba(255,255,255,0.025)",
+                          border: "1px solid rgba(255,255,255,0.08)",
+                          borderRadius: 12,
+                          padding: "16px 18px",
+                          marginBottom: 10,
+                        }}
+                      >
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                          <p style={sectionLabel(accent)}>For LinkedIn</p>
+                          <button
+                            onClick={() => copyDraft("li")}
+                            style={{
+                              background: shareCopied === "li" ? "#16a34a" : "#003536",
+                              color: shareCopied === "li" ? "#fff" : accent,
+                              border: "1px solid rgba(148,209,211,0.25)",
+                              padding: "6px 12px",
+                              borderRadius: 6,
+                              fontSize: 11,
+                              fontWeight: 800,
+                              cursor: "pointer",
+                            }}
+                          >
+                            {shareCopied === "li" ? "Copied" : "Copy"}
+                          </button>
+                        </div>
+                        <p style={{ fontSize: 13, color: textMain, lineHeight: 1.65, whiteSpace: "pre-wrap" }}>
+                          {shareResult.linkedin_draft.text}
+                        </p>
+                      </div>
+                    )}
+                    {shareResult?.phi_check && (
+                      <div
+                        style={{
+                          padding: "10px 14px",
+                          background: "rgba(34,197,94,0.06)",
+                          border: "1px solid rgba(34,197,94,0.25)",
+                          borderRadius: 8,
+                          marginBottom: 12,
+                        }}
+                      >
+                        <p style={{ fontSize: 10, color: "#86efac", fontWeight: 800, marginBottom: 4, letterSpacing: "0.1em", textTransform: "uppercase" }}>
+                          PHI check
+                        </p>
+                        <p style={{ fontSize: 11, color: "rgba(232,237,242,0.7)", lineHeight: 1.5 }}>
+                          {shareResult.phi_check}
+                        </p>
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
             )}
           </>
