@@ -745,7 +745,7 @@ export default function PocketPage() {
   const bg = "#001a1b";
   const accent = "#94d1d3";
   const textMain = "#E8EDF2";
-  const textMuted = "rgba(232,237,242,0.6)";
+  const textMuted = "rgba(232,237,242,0.78)";
 
   // ─── Next Best Action — what the surgeon should do RIGHT NOW ───────────
   // Computed from local state. Mobile app should always be fresh with the next
@@ -1507,11 +1507,7 @@ export default function PocketPage() {
           <>
             <ModeHeader
               title={preferredDestination ? `Refer to ${preferredDestination.display_name.replace(/^Dr\. /, "")}` : "Refer a patient"}
-              sub={
-                preferredDestination
-                  ? `Speak the case. Pocket clinically routes — surgical or non-surgical — and prioritizes ${preferredDestination.display_name.split(" ").pop()} when surgery is warranted. Letter drafted, codes captured for your visit.`
-                  : "Speak the patient context. Pocket clinically routes — PT, pain management, or surgical consult — and drafts the referral letter."
-              }
+              sub=""
               accent={accent}
               muted={textMuted}
             />
@@ -1566,8 +1562,8 @@ export default function PocketPage() {
             <textarea
               value={referContext}
               onChange={(e) => setReferContext(e.target.value)}
-              placeholder="60yo M post-op TKA, needs PT 2x/week"
-              rows={4}
+              placeholder="Paste from your EMR, or type the case here. Or hold the mic above to dictate."
+              rows={5}
               style={fieldStyle()}
             />
             {referContext && !referResult && !referLoading && (
@@ -2108,19 +2104,6 @@ export default function PocketPage() {
           </>
         )}
 
-        <p
-          style={{
-            fontSize: 10,
-            color: "rgba(232,237,242,0.35)",
-            textAlign: "center",
-            marginTop: 32,
-            lineHeight: 1.6,
-          }}
-        >
-          Add to home screen: tap Share → Add to Home Screen.
-          <br />
-          Everything stays on your device. No signup.
-        </p>
       </div>
 
       {/* Bottom tab bar — hidden by default for adoption simplicity, shown via "..." toggle */}
@@ -2219,14 +2202,14 @@ export default function PocketPage() {
 
 function ModeHeader({ title, sub, accent, muted }: { title: string; sub: string; accent: string; muted: string }) {
   return (
-    <div style={{ marginBottom: 18 }}>
-      <p style={{ fontSize: 10, letterSpacing: "0.2em", textTransform: "uppercase", color: accent, fontWeight: 800, marginBottom: 6 }}>
+    <div style={{ marginBottom: 22 }}>
+      <p style={{ fontSize: 10, letterSpacing: "0.2em", textTransform: "uppercase", color: accent, fontWeight: 800, marginBottom: 8 }}>
         SurgeonValue Pocket
       </p>
-      <h1 style={{ fontSize: 24, fontWeight: 900, letterSpacing: "-0.8px", lineHeight: 1.1, marginBottom: 6 }}>
+      <h1 style={{ fontSize: 26, fontWeight: 900, letterSpacing: "-0.8px", lineHeight: 1.1, marginBottom: sub ? 6 : 0 }}>
         {title}
       </h1>
-      <p style={{ fontSize: 12, color: muted, lineHeight: 1.5 }}>{sub}</p>
+      {sub && <p style={{ fontSize: 12, color: muted, lineHeight: 1.5 }}>{sub}</p>}
     </div>
   );
 }

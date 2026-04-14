@@ -45,7 +45,7 @@ export default function ProfileClient(props: Props) {
   const bg = "#001a1b";
   const accent = "#94d1d3";
   const textMain = "#E8EDF2";
-  const textMuted = "rgba(232,237,242,0.6)";
+  const textMuted = "rgba(232,237,242,0.78)";
   const stanford = "#8C1515";
 
   return (
@@ -150,21 +150,18 @@ export default function ProfileClient(props: Props) {
             textAlign: "center",
             background: accent,
             color: bg,
-            padding: "20px 28px",
+            padding: "22px 28px",
             borderRadius: 14,
             textDecoration: "none",
-            fontSize: 16,
+            fontSize: 17,
             fontWeight: 900,
             letterSpacing: "-0.3px",
             boxShadow: "0 16px 40px rgba(148,209,211,0.2)",
-            marginBottom: 8,
+            marginBottom: 32,
           }}
         >
           Refer a patient →
         </a>
-        <p style={{ fontSize: 11, color: textMuted, textAlign: "center", marginBottom: 32 }}>
-          Voice or paste. No login.
-        </p>
 
         {/* Subspecialty focus */}
         {props.subspecialtyFocus.length > 0 && (
@@ -270,7 +267,7 @@ export default function ProfileClient(props: Props) {
               Next available: {props.nextAvailable}
             </p>
           )}
-          <p style={{ fontSize: 10, color: "rgba(232,237,242,0.35)", marginTop: 10 }}>
+          <p style={{ fontSize: 11, color: "rgba(232,237,242,0.65)", marginTop: 10 }}>
             NPI {props.npi} · Live from CMS NPPES
           </p>
         </div>
@@ -326,8 +323,8 @@ export default function ProfileClient(props: Props) {
         {/* Footer */}
         <p
           style={{
-            fontSize: 10,
-            color: "rgba(232,237,242,0.3)",
+            fontSize: 11,
+            color: "rgba(232,237,242,0.6)",
             textAlign: "center",
             marginTop: 32,
             lineHeight: 1.6,

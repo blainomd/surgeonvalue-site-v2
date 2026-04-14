@@ -165,7 +165,7 @@ export default function LevontiClient({
   const bg = "#001a1b";
   const accent = "#94d1d3";
   const textMain = "#E8EDF2";
-  const textMuted = "rgba(232,237,242,0.6)";
+  const textMuted = "rgba(232,237,242,0.78)";
   const stanford = "#8C1515";
 
   return (
@@ -205,7 +205,7 @@ export default function LevontiClient({
           >
             Dr. {fullName.split(" ").pop()}
           </h1>
-          <p style={{ fontSize: 13, color: "rgba(232,237,242,0.4)" }}>
+          <p style={{ fontSize: 13, color: "rgba(232,237,242,0.7)" }}>
             {tomorrowLabel}
           </p>
         </div>
@@ -241,7 +241,7 @@ export default function LevontiClient({
               {fullName}, <span style={{ color: accent }}>{credential}</span>
             </p>
             <p style={{ fontSize: 14, color: textMuted, marginBottom: 4 }}>{specialty}</p>
-            <p style={{ fontSize: 13, color: "rgba(232,237,242,0.45)" }}>
+            <p style={{ fontSize: 13, color: "rgba(232,237,242,0.7)" }}>
               {practiceLine1} · {practiceCity}, {practiceState} · NPI {npi}
             </p>
           </div>
@@ -253,10 +253,10 @@ export default function LevontiClient({
           >
             <p
               style={{
-                fontSize: 9,
+                fontSize: 10,
                 letterSpacing: "0.18em",
                 textTransform: "uppercase",
-                color: "rgba(232,237,242,0.4)",
+                color: "rgba(232,237,242,0.78)",
                 marginBottom: 6,
                 fontWeight: 800,
               }}
@@ -852,20 +852,16 @@ export default function LevontiClient({
             textAlign: "center",
           }}
         >
-          <p style={{ fontSize: 11, color: textMuted, lineHeight: 1.6, maxWidth: 460, margin: "0 auto" }}>
-            Real CMS NPPES data. Real 2026 Medicare allowables.
-          </p>
           <p
             style={{
               fontSize: 10,
               letterSpacing: "0.2em",
               textTransform: "uppercase",
-              color: "rgba(232,237,242,0.3)",
-              marginTop: 18,
+              color: "rgba(232,237,242,0.5)",
               fontWeight: 800,
             }}
           >
-            SurgeonValue · Personalized for {fullName}
+            SurgeonValue
           </p>
         </div>
       </div>
