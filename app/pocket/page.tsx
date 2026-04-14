@@ -110,13 +110,36 @@ interface SREventError {
   error: string;
 }
 
-type Mode = "code" | "pa" | "ask" | "lookup" | "share" | "queue";
+type Mode = "code" | "pa" | "ask" | "lookup" | "refer" | "share" | "queue";
 
 type PostDraft = {
   topic?: string;
   x_draft?: { text?: string; char_count?: number; hashtags?: string[] };
   linkedin_draft?: { text?: string; hook?: string };
   phi_check?: string;
+};
+
+type ReferralProvider = {
+  npi: string;
+  name: string;
+  credential: string;
+  specialty: string;
+  city: string;
+  state: string;
+  zip: string;
+  address: string;
+  phone: string;
+};
+
+type ReferralResult = {
+  inferred_specialty?: string;
+  matched_providers?: ReferralProvider[];
+  referral_letter?: {
+    letter?: string;
+    key_points?: string[];
+    urgency?: string;
+    phi_stripped?: string;
+  };
 };
 
 // ─── Storage keys ───────────────────────────────────────────────────────────
@@ -169,6 +192,15 @@ export default function PocketPage() {
   const [lookupLoading, setLookupLoading] = useState(false);
   const [lookupResult, setLookupResult] = useState<NppesResult | null>(null);
 
+  // Refer state
+  const [referContext, setReferContext] = useState("");
+  const [referSpecialty, setReferSpecialty] = useState("");
+  const [referState, setReferState] = useState("");
+  const [referCity, setReferCity] = useState("");
+  const [referLoading, setReferLoading] = useState(false);
+  const [referResult, setReferResult] = useState<ReferralResult | null>(null);
+  const [referCopied, setReferCopied] = useState(false);
+
   // Share (post drafter) state
   const [shareObservation, setShareObservation] = useState("");
   const [shareLoading, setShareLoading] = useState(false);
@@ -180,7 +212,7 @@ export default function PocketPage() {
   const [billerEmail, setBillerEmail] = useState("");
 
   // Speech listening target — which textarea the current voice session writes to
-  const [voiceTarget, setVoiceTarget] = useState<"code" | "pa" | "ask" | "share" | null>(null);
+  const [voiceTarget, setVoiceTarget] = useState<"code" | "pa" | "ask" | "share" | "refer" | null>(null);
 
   // ── Init ────────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -204,6 +236,7 @@ export default function PocketPage() {
       else if (v === "ask") setMode("ask");
       else if (v === "lookup") setMode("lookup");
       else if (v === "share") setMode("share");
+      else if (v === "refer") setMode("refer");
     }
   }, []);
 
@@ -226,7 +259,7 @@ export default function PocketPage() {
   };
 
   // ── Voice ───────────────────────────────────────────────────────────────
-  const startListening = (target: "code" | "pa" | "ask" | "share") => {
+  const startListening = (target: "code" | "pa" | "ask" | "share" | "refer") => {
     const w = window as unknown as { SpeechRecognition?: SRCtor; webkitSpeechRecognition?: SRCtor };
     const SR = w.SpeechRecognition || w.webkitSpeechRecognition;
     if (!SR) {
@@ -255,6 +288,7 @@ export default function PocketPage() {
       else if (target === "pa") setPaNote(combined);
       else if (target === "ask") setAskQuestion(combined);
       else if (target === "share") setShareObservation(combined);
+      else if (target === "refer") setReferContext(combined);
     };
     rec.onerror = (e: SREventError) => {
       setError(`Voice error: ${e.error}`);
@@ -471,6 +505,56 @@ export default function PocketPage() {
     }
   };
 
+  // ── Refer submit ────────────────────────────────────────────────────────
+  const submitRefer = async () => {
+    const text = referContext.trim();
+    if (text.length < 15) {
+      setError("Dictate or type the patient context first.");
+      return;
+    }
+    setReferLoading(true);
+    setError(null);
+    setReferResult(null);
+    setReferCopied(false);
+    try {
+      const res = await fetch("/api/refer", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          patient_context: text,
+          specialty_hint: referSpecialty.trim(),
+          state: referState.trim(),
+          city: referCity.trim(),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) setError(data.error || "Refer failed.");
+      else {
+        setReferResult({
+          inferred_specialty: data.inferred_specialty,
+          matched_providers: data.matched_providers || [],
+          referral_letter: data.referral_letter,
+        });
+      }
+    } catch {
+      setError("Network error. Try again.");
+    } finally {
+      setReferLoading(false);
+    }
+  };
+
+  const copyReferralLetter = async () => {
+    const text = referResult?.referral_letter?.letter;
+    if (!text) return;
+    try {
+      await navigator.clipboard.writeText(text);
+      setReferCopied(true);
+      setTimeout(() => setReferCopied(false), 2400);
+    } catch {
+      /* ignore */
+    }
+  };
+
   // ── Lookup submit ───────────────────────────────────────────────────────
   const submitLookup = async () => {
     const npi = lookupNpi.trim();
@@ -582,8 +666,62 @@ export default function PocketPage() {
   const textMain = "#E8EDF2";
   const textMuted = "rgba(232,237,242,0.6)";
 
+  // ─── Next Best Action — what the surgeon should do RIGHT NOW ───────────
+  // Computed from local state. Mobile app should always be fresh with the next
+  // best thing to do, never neutral.
+  type NextAction = { label: string; cta: string; mode: Mode; tone: "default" | "urgent" | "info" } | null;
+  const computeNextBestAction = (): NextAction => {
+    // 1. Queue with $ totals waiting → biller email is the move
+    if (queue.length >= 3) {
+      return {
+        label: `${queue.length} encounters · ${dollarFmt(queueTotal)} ready to send your biller`,
+        cta: "Email biller now",
+        mode: "queue",
+        tone: "urgent",
+      };
+    }
+    // 2. CMS ACCESS deadline countdown
+    const accessDeadline = new Date("2026-05-15T23:59:59-07:00").getTime();
+    const now = Date.now();
+    const daysToDeadline = Math.ceil((accessDeadline - now) / (1000 * 60 * 60 * 24));
+    if (daysToDeadline > 0 && daysToDeadline <= 30) {
+      return {
+        label: `${daysToDeadline} days to CMS ACCESS Model deadline. Draft a post to flag it to your division.`,
+        cta: "Draft post",
+        mode: "share",
+        tone: "info",
+      };
+    }
+    // 3. Queue has some items but not many → keep capturing
+    if (queue.length >= 1 && queue.length < 3) {
+      return {
+        label: `${queue.length} in queue · ${dollarFmt(queueTotal)} so far. Capture your next encounter.`,
+        cta: "Dictate next",
+        mode: "code",
+        tone: "default",
+      };
+    }
+    // 4. No biller email saved → setup nudge
+    if (!billerEmail.trim()) {
+      return {
+        label: "Set your biller email so end-of-day export works.",
+        cta: "Set email",
+        mode: "queue",
+        tone: "info",
+      };
+    }
+    // 5. First-use: just nudge to capture
+    return {
+      label: "Capture today's first encounter — voice in, codes + post out.",
+      cta: "Start dictating",
+      mode: "code",
+      tone: "default",
+    };
+  };
+  const nextAction = computeNextBestAction();
+
   // ─── Inline reusable: voice button ──────────────────────────────────────
-  const VoiceButton = ({ target, size = 160 }: { target: "code" | "pa" | "ask" | "share"; size?: number }) => {
+  const VoiceButton = ({ target, size = 160 }: { target: "code" | "pa" | "ask" | "share" | "refer"; size?: number }) => {
     const isActive = listening && voiceTarget === target;
     return (
       <button
@@ -711,6 +849,86 @@ export default function PocketPage() {
           >
             {error}
           </div>
+        )}
+
+        {/* ─── Next Best Action — always fresh ────────────────────────── */}
+        {nextAction && (
+          <button
+            onClick={() => setMode(nextAction.mode)}
+            style={{
+              width: "100%",
+              background:
+                nextAction.tone === "urgent"
+                  ? "linear-gradient(135deg, rgba(239,68,68,0.12), rgba(148,209,211,0.04))"
+                  : nextAction.tone === "info"
+                    ? "linear-gradient(135deg, rgba(245,158,11,0.1), rgba(148,209,211,0.04))"
+                    : "rgba(148,209,211,0.05)",
+              border: `1px solid ${
+                nextAction.tone === "urgent"
+                  ? "rgba(239,68,68,0.4)"
+                  : nextAction.tone === "info"
+                    ? "rgba(245,158,11,0.4)"
+                    : "rgba(148,209,211,0.2)"
+              }`,
+              borderRadius: 14,
+              padding: "14px 16px",
+              marginBottom: 18,
+              textAlign: "left",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: 12,
+              color: textMain,
+              fontFamily: "inherit",
+            }}
+          >
+            <div
+              style={{
+                width: 8,
+                height: 8,
+                borderRadius: "50%",
+                background:
+                  nextAction.tone === "urgent"
+                    ? "#ef4444"
+                    : nextAction.tone === "info"
+                      ? "#fbbf24"
+                      : "#22c55e",
+                boxShadow: `0 0 12px ${
+                  nextAction.tone === "urgent"
+                    ? "#ef4444"
+                    : nextAction.tone === "info"
+                      ? "#fbbf24"
+                      : "#22c55e"
+                }`,
+                flexShrink: 0,
+              }}
+            />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <p
+                style={{
+                  fontSize: 9,
+                  letterSpacing: "0.18em",
+                  textTransform: "uppercase",
+                  color:
+                    nextAction.tone === "urgent"
+                      ? "#fca5a5"
+                      : nextAction.tone === "info"
+                        ? "#fbbf24"
+                        : "#86efac",
+                  fontWeight: 800,
+                  marginBottom: 2,
+                }}
+              >
+                Next best
+              </p>
+              <p style={{ fontSize: 12, color: textMain, lineHeight: 1.4, fontWeight: 600 }}>
+                {nextAction.label}
+              </p>
+            </div>
+            <span style={{ fontSize: 11, fontWeight: 800, color: accent, whiteSpace: "nowrap" }}>
+              {nextAction.cta} →
+            </span>
+          </button>
         )}
 
         {/* ─── CODE (Wonder Bill) ───────────────────────────────────────── */}
@@ -1181,6 +1399,185 @@ export default function PocketPage() {
           </>
         )}
 
+        {/* ─── REFER (voice → matched providers + drafted letter) ───────── */}
+        {mode === "refer" && (
+          <>
+            <ModeHeader
+              title="Refer a patient"
+              sub="Speak the patient context and the kind of provider you need. Pocket searches NPPES for matches and drafts the referral letter."
+              accent={accent}
+              muted={textMuted}
+            />
+            <div style={{ display: "flex", justifyContent: "center", marginBottom: 18 }}>
+              <VoiceButton target="refer" size={140} />
+            </div>
+            <textarea
+              value={referContext}
+              onChange={(e) => setReferContext(e.target.value)}
+              placeholder="e.g., 60yo M post-op TKA week 2, needs PT 2x/week starting next week, has UnitedHealth"
+              rows={4}
+              style={fieldStyle()}
+            />
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginTop: 10 }}>
+              <input
+                value={referSpecialty}
+                onChange={(e) => setReferSpecialty(e.target.value)}
+                placeholder="Specialty (PT, pain, rheum...)"
+                style={{ ...fieldStyle(), fontSize: 12 }}
+              />
+              <input
+                value={referCity}
+                onChange={(e) => setReferCity(e.target.value)}
+                placeholder="City"
+                style={{ ...fieldStyle(), fontSize: 12 }}
+              />
+              <input
+                value={referState}
+                onChange={(e) => setReferState(e.target.value.toUpperCase().slice(0, 2))}
+                placeholder="State"
+                maxLength={2}
+                style={{ ...fieldStyle(), fontSize: 12, textAlign: "center" }}
+              />
+            </div>
+            {referContext && !referResult && (
+              <button onClick={submitRefer} disabled={referLoading} style={primaryBtn(referLoading, accent, bg)}>
+                {referLoading ? "Searching providers + drafting letter…" : "Find matches + draft letter →"}
+              </button>
+            )}
+
+            {referResult && (
+              <div style={{ marginTop: 16 }}>
+                {referResult.inferred_specialty && (
+                  <p style={{ fontSize: 12, color: textMuted, fontStyle: "italic", marginBottom: 12 }}>
+                    Searched for: {referResult.inferred_specialty}
+                  </p>
+                )}
+
+                {/* Matched providers */}
+                {referResult.matched_providers && referResult.matched_providers.length > 0 ? (
+                  <>
+                    <p style={sectionLabel(accent)}>Matched providers ({referResult.matched_providers.length})</p>
+                    <div style={{ display: "grid", gap: 8, marginBottom: 16 }}>
+                      {referResult.matched_providers.map((p, i) => (
+                        <div key={i} style={subtleCard()}>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 4 }}>
+                            <p style={{ fontSize: 13, fontWeight: 800, color: textMain }}>
+                              {p.name}
+                              {p.credential && (
+                                <span style={{ color: accent, fontSize: 11, marginLeft: 6 }}>{p.credential}</span>
+                              )}
+                            </p>
+                            {p.phone && (
+                              <a
+                                href={`tel:${p.phone.replace(/\D/g, "")}`}
+                                style={{ fontSize: 11, color: accent, fontWeight: 800, textDecoration: "none", whiteSpace: "nowrap" }}
+                              >
+                                Call →
+                              </a>
+                            )}
+                          </div>
+                          <p style={{ fontSize: 11, color: textMuted }}>
+                            {p.specialty}
+                          </p>
+                          <p style={{ fontSize: 11, color: "rgba(232,237,242,0.45)", marginTop: 2 }}>
+                            {p.address && `${p.address} · `}
+                            {p.city}, {p.state} {p.zip}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <p style={{ fontSize: 12, color: textMuted, marginBottom: 12 }}>
+                    No matching providers found in NPPES for this specialty + location. Try widening
+                    the state or specialty.
+                  </p>
+                )}
+
+                {/* Referral letter */}
+                {referResult.referral_letter?.letter && (
+                  <div style={{ marginTop: 12 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                      <p style={sectionLabel(accent)}>Referral letter</p>
+                      <button
+                        onClick={copyReferralLetter}
+                        style={{
+                          background: referCopied ? "#16a34a" : "#003536",
+                          color: referCopied ? "#fff" : accent,
+                          border: "1px solid rgba(148,209,211,0.25)",
+                          padding: "6px 12px",
+                          borderRadius: 6,
+                          fontSize: 11,
+                          fontWeight: 800,
+                          cursor: "pointer",
+                        }}
+                      >
+                        {referCopied ? "Copied" : "Copy letter"}
+                      </button>
+                    </div>
+                    {referResult.referral_letter.urgency && referResult.referral_letter.urgency !== "routine" && (
+                      <p
+                        style={{
+                          fontSize: 10,
+                          letterSpacing: "0.1em",
+                          textTransform: "uppercase",
+                          color: referResult.referral_letter.urgency === "stat" ? "#fca5a5" : "#fbbf24",
+                          fontWeight: 800,
+                          marginBottom: 6,
+                        }}
+                      >
+                        {referResult.referral_letter.urgency} urgency
+                      </p>
+                    )}
+                    <pre
+                      style={{
+                        background: "rgba(0,0,0,0.3)",
+                        border: "1px solid rgba(148,209,211,0.15)",
+                        borderRadius: 10,
+                        padding: 14,
+                        fontSize: 11,
+                        color: "rgba(232,237,242,0.9)",
+                        fontFamily: "ui-monospace, monospace",
+                        whiteSpace: "pre-wrap",
+                        lineHeight: 1.6,
+                        overflowX: "auto",
+                        margin: 0,
+                      }}
+                    >
+                      {referResult.referral_letter.letter}
+                    </pre>
+                    {referResult.referral_letter.phi_stripped && (
+                      <p
+                        style={{
+                          marginTop: 8,
+                          padding: "8px 12px",
+                          fontSize: 10,
+                          color: "#86efac",
+                          background: "rgba(34,197,94,0.06)",
+                          border: "1px solid rgba(34,197,94,0.25)",
+                          borderRadius: 6,
+                        }}
+                      >
+                        PHI stripped: {referResult.referral_letter.phi_stripped}
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                <button
+                  onClick={() => {
+                    setReferResult(null);
+                    setReferContext("");
+                  }}
+                  style={{ ...ghostBtn(textMain), marginTop: 12, width: "100%" }}
+                >
+                  Refer another
+                </button>
+              </div>
+            )}
+          </>
+        )}
+
         {/* ─── SHARE (post drafter) ─────────────────────────────────────── */}
         {mode === "share" && (
           <>
@@ -1455,9 +1852,9 @@ export default function PocketPage() {
           backdropFilter: "blur(20px)",
           WebkitBackdropFilter: "blur(20px)",
           borderTop: "1px solid rgba(148,209,211,0.15)",
-          padding: "10px 6px max(10px, env(safe-area-inset-bottom))",
+          padding: "10px 4px max(10px, env(safe-area-inset-bottom))",
           display: "grid",
-          gridTemplateColumns: "repeat(6, 1fr)",
+          gridTemplateColumns: "repeat(7, 1fr)",
           gap: 2,
           zIndex: 1000,
         }}
@@ -1467,6 +1864,7 @@ export default function PocketPage() {
             { id: "code", label: "Code", icon: "$" },
             { id: "pa", label: "PA", icon: "PA" },
             { id: "ask", label: "Ask", icon: "?" },
+            { id: "refer", label: "Refer", icon: "R" },
             { id: "lookup", label: "Find", icon: "ID" },
             { id: "share", label: "Share", icon: "X" },
             { id: "queue", label: "Queue", icon: "Q", badge: queue.length },
