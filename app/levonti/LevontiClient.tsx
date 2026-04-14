@@ -261,16 +261,65 @@ export default function LevontiClient({
                 fontWeight: 800,
               }}
             >
-              Estimated annual missed revenue
+              Upside ceiling · untouched codes
             </p>
             <p style={{ fontSize: 26, fontWeight: 900, letterSpacing: "-0.5px", color: "#fbbf24" }}>
-              {dollarFmt(missedLow)}–{dollarFmt(missedHigh)}
+              {dollarFmt(Math.round(missedLow * 0.45))}–{dollarFmt(Math.round(missedHigh * 0.55))}
             </p>
             <p style={{ fontSize: 11, color: textMuted, marginTop: 2 }}>
-              For your specialty, your panel size
+              Realistic net after documentation + denial attrition
             </p>
           </div>
         </div>
+
+        {/* Calculation breakdown — the honesty layer */}
+        <details
+          style={{
+            marginBottom: 32,
+            background: "rgba(148,209,211,0.04)",
+            border: "1px solid rgba(148,209,211,0.15)",
+            borderRadius: 14,
+            padding: "16px 20px",
+          }}
+        >
+          <summary
+            style={{
+              fontSize: 11,
+              letterSpacing: "0.2em",
+              textTransform: "uppercase",
+              color: accent,
+              fontWeight: 800,
+              cursor: "pointer",
+              listStyle: "none",
+              outline: "none",
+            }}
+          >
+            How we calculated this ↓
+          </summary>
+          <div style={{ marginTop: 14, fontSize: 13, color: textMuted, lineHeight: 1.65 }}>
+            <p style={{ marginBottom: 12 }}>
+              The specialty-average ceiling for <strong style={{ color: textMain }}>{specialty}</strong> is{" "}
+              <strong style={{ color: "#fbbf24" }}>{dollarFmt(missedLow)}–{dollarFmt(missedHigh)}</strong>{" "}
+              across a ~600-patient longitudinal panel, assuming full capture of CCM (99490), RTM
+              (98975–98981), CPM (G0023), prolonged services (99417), and visit-complexity add-ons
+              (G2211). These are stackable codes most ortho practices under-bill by{" "}
+              <strong style={{ color: textMain }}>85–96%</strong> per CMS utilization data.
+            </p>
+            <p style={{ marginBottom: 12 }}>
+              <strong style={{ color: textMain }}>The realistic net</strong> assumes you capture roughly{" "}
+              <strong style={{ color: textMain }}>45–55%</strong> of the ceiling after: documentation
+              overhead, payer-specific denials (especially Medicare Advantage step-edits), staff-time
+              thresholds for CCM, patient consent gates, and the code-exclusion rules that block
+              stacking on the same encounter. That&apos;s the number to bring to a compliance
+              conversation.
+            </p>
+            <p style={{ marginBottom: 0, fontSize: 12, color: "rgba(232,237,242,0.55)" }}>
+              <strong style={{ color: textMain }}>Source:</strong> Curated specialty profile from the
+              SurgeonValue likely-missed-codes table. The ceiling is defensible but high. The net is
+              what your biller will actually capture in Year 1.
+            </p>
+          </div>
+        </details>
 
         {/* Top codes for your specialty */}
         {topCodes.length > 0 && (
