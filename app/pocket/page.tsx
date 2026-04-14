@@ -448,11 +448,31 @@ export default function PocketPage() {
     setError(null);
     setLookupResult(null);
     try {
-      const res = await fetch(`/api/npi?number=${encodeURIComponent(npi)}`);
+      const res = await fetch(`/api/npi?npi=${encodeURIComponent(npi)}`);
       const data = await res.json();
-      if (!res.ok || data.error) setError(data.error || "Lookup failed.");
-      else if (data.results && data.results.length > 0) setLookupResult(data.results[0] as NppesResult);
-      else setError("No NPPES profile found for that NPI.");
+      if (!res.ok || data.error) setError(data.error || data.message || "Lookup failed.");
+      else if (data.npi || data.provider) {
+        // /api/npi?npi= returns a flat shape; map it to NppesResult-like for the UI
+        setLookupResult({
+          number: data.npi,
+          basic: {
+            first_name: data.provider?.firstName,
+            last_name: data.provider?.lastName,
+            credential: data.provider?.credential,
+          },
+          taxonomies: [{ desc: data.specialty?.description, primary: true, state: data.specialty?.state }],
+          addresses: [
+            {
+              address_1: data.address?.line1,
+              address_2: data.address?.line2,
+              city: data.address?.city,
+              state: data.address?.state,
+              postal_code: data.address?.zip,
+              telephone_number: data.phone,
+            },
+          ],
+        });
+      } else setError("No NPPES profile found for that NPI.");
     } catch {
       setError("Network error. Try again.");
     } finally {

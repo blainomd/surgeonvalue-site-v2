@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation';
+import { lookupNpi } from '@/app/api/npi/route';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -55,20 +56,10 @@ interface NpiApiResult {
 
 async function fetchNpiData(npi: string): Promise<NpiApiResult | null> {
   if (!/^\d{10}$/.test(npi)) return null;
-
   try {
-    const base =
-      process.env.NEXT_PUBLIC_SITE_URL ||
-      (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
-
-    const res = await fetch(`${base}/api/npi?npi=${encodeURIComponent(npi)}`, {
-      next: { revalidate: 3600 },
-    });
-
-    if (!res.ok) return null;
-    const data = await res.json();
-    if (data.error) return null;
-    return data as NpiApiResult;
+    const data = await lookupNpi(npi);
+    if (!data || (data as { error?: string }).error) return null;
+    return data as unknown as NpiApiResult;
   } catch {
     return null;
   }
@@ -92,9 +83,9 @@ function formatCurrency(n: number): string {
 export default async function NpiProfilePage({
   params,
 }: {
-  params: { npi: string };
+  params: Promise<{ npi: string }>;
 }) {
-  const { npi } = params;
+  const { npi } = await params;
 
   if (!/^\d{10}$/.test(npi)) {
     notFound();
@@ -372,8 +363,8 @@ export default async function NpiProfilePage({
 
 // ── Metadata ───────────────────────────────────────────────────────────────
 
-export async function generateMetadata({ params }: { params: { npi: string } }) {
-  const { npi } = params;
+export async function generateMetadata({ params }: { params: Promise<{ npi: string }> }) {
+  const { npi } = await params;
   return {
     title: `NPI ${npi} — SurgeonValue`,
     description: `Revenue estimate and missed billing codes for NPI ${npi}. Powered by CMS NPPES data.`,

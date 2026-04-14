@@ -126,7 +126,7 @@ function isValidNpi(npi: string): boolean {
   return /^\d{10}$/.test(npi);
 }
 
-async function lookupNpi(npi: string) {
+export async function lookupNpi(npi: string) {
   if (!isValidNpi(npi)) {
     return {
       error: "invalid_npi",
