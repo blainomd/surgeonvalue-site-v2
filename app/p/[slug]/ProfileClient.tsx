@@ -330,9 +330,10 @@ export default function ProfileClient(props: Props) {
             color: "rgba(232,237,242,0.3)",
             textAlign: "center",
             marginTop: 32,
+            lineHeight: 1.6,
           }}
         >
-          SurgeonValue · NPPES live
+          SurgeonValue · System of care, not a clinic visit
         </p>
       </div>
     </main>

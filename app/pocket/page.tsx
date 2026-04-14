@@ -1685,22 +1685,57 @@ export default function PocketPage() {
                 {/* Referral letter */}
                 {referResult.referral_letter?.letter && (
                   <div style={{ marginTop: 12 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                      <p style={sectionLabel(accent)}>Referral letter</p>
+                    <p style={sectionLabel(accent)}>Referral letter</p>
+                    {/* Send row — one tap to text, email, or copy */}
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 10 }}>
+                      <a
+                        href={`sms:?&body=${encodeURIComponent(referResult.referral_letter.letter || "")}`}
+                        style={{
+                          background: "#003536",
+                          color: accent,
+                          border: "1px solid rgba(148,209,211,0.25)",
+                          padding: "12px 8px",
+                          borderRadius: 8,
+                          fontSize: 12,
+                          fontWeight: 800,
+                          cursor: "pointer",
+                          textDecoration: "none",
+                          textAlign: "center",
+                        }}
+                      >
+                        Text
+                      </a>
+                      <a
+                        href={`mailto:?subject=${encodeURIComponent("Referral: " + (referResult.inferred_specialty || "Specialist consult"))}&body=${encodeURIComponent(referResult.referral_letter.letter || "")}`}
+                        style={{
+                          background: "#003536",
+                          color: accent,
+                          border: "1px solid rgba(148,209,211,0.25)",
+                          padding: "12px 8px",
+                          borderRadius: 8,
+                          fontSize: 12,
+                          fontWeight: 800,
+                          cursor: "pointer",
+                          textDecoration: "none",
+                          textAlign: "center",
+                        }}
+                      >
+                        Email
+                      </a>
                       <button
                         onClick={copyReferralLetter}
                         style={{
                           background: referCopied ? "#16a34a" : "#003536",
                           color: referCopied ? "#fff" : accent,
                           border: "1px solid rgba(148,209,211,0.25)",
-                          padding: "6px 12px",
-                          borderRadius: 6,
-                          fontSize: 11,
+                          padding: "12px 8px",
+                          borderRadius: 8,
+                          fontSize: 12,
                           fontWeight: 800,
                           cursor: "pointer",
                         }}
                       >
-                        {referCopied ? "Copied" : "Copy letter"}
+                        {referCopied ? "Copied" : "Copy"}
                       </button>
                     </div>
                     {referResult.referral_letter.urgency && referResult.referral_letter.urgency !== "routine" && (

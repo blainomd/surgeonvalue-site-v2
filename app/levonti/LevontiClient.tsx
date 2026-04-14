@@ -802,18 +802,18 @@ export default function LevontiClient({
             {[
               {
                 step: "1",
-                line: '"Quick thing — I\'ve been using this between cases. Watch."',
-                hint: "Pull out your phone. Open this page or open Pocket directly.",
+                line: '"I\'m rolling out a referral process for our patients. Scan this."',
+                hint: "Show your /p/levonti QR. Real process, not a favor.",
               },
               {
                 step: "2",
-                line: '"It just read a real clinical note and found three CPT codes I would have missed."',
-                hint: "Tap the demo button. Hand them the phone. Don\'t explain. Let them watch.",
+                line: '"You dictate the case, it routes to the right specialist, drafts the letter."',
+                hint: "Optional: tap the demo button to show it on a real ortho note in 8 seconds.",
               },
               {
                 step: "3",
-                line: '"I\'m installing it on my phone right now. Want me to send you the link?"',
-                hint: "If they nod, text them surgeonvalue.com/pocket. Done. Move on.",
+                line: '"You also get the codes for your visit. We share the network."',
+                hint: "Move on. The PCP is now in your referral routing system for life.",
               },
             ].map((s, i) => (
               <div key={i} style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: 16 }}>
