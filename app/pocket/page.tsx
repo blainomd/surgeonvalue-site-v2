@@ -133,6 +133,7 @@ type ReferralProvider = {
 
 type ReferralResult = {
   inferred_specialty?: string;
+  preferred_specialist?: ReferralProvider | null;
   matched_providers?: ReferralProvider[];
   referral_letter?: {
     letter?: string;
@@ -140,6 +141,11 @@ type ReferralResult = {
     urgency?: string;
     phi_stripped?: string;
   };
+  billing_capture?: {
+    note_summary?: string;
+    line_items?: LineItem[];
+    total_visit_dollars?: number;
+  } | null;
 };
 
 // ─── Storage keys ───────────────────────────────────────────────────────────
@@ -160,12 +166,35 @@ const riskColor: Record<string, string> = {
 
 // ─── Page ───────────────────────────────────────────────────────────────────
 
+// Known SurgeonValue customers — when /pocket?to=<slug> is set, we surface
+// them as the preferred destination for any matched specialty.
+type PreferredDestination = {
+  slug: string;
+  npi: string;
+  display_name: string;
+  practice: string;
+  specialty: string;
+};
+const PREFERRED_DESTINATIONS: Record<string, PreferredDestination> = {
+  levonti: {
+    slug: "levonti",
+    npi: "1104445147",
+    display_name: "Dr. Levon Ohanisian, MD",
+    practice: "Stanford Orthopaedic Surgery",
+    specialty: "Orthopedic Surgery",
+  },
+  // Derek will be added when his NPI is confirmed
+};
+
 export default function PocketPage() {
-  // Mode & shared state
-  const [mode, setMode] = useState<Mode>("code");
+  // Mode & shared state — DEFAULT is referral, not billing. Pocket's primary
+  // user is a referring provider sending patients to a SurgeonValue customer.
+  const [mode, setMode] = useState<Mode>("refer");
   const [error, setError] = useState<string | null>(null);
   const [speechSupported, setSpeechSupported] = useState(true);
   const [listening, setListening] = useState(false);
+  const [showPowerTabs, setShowPowerTabs] = useState(false);
+  const [preferredDestination, setPreferredDestination] = useState<PreferredDestination | null>(null);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
 
   // Code (Wonder Bill) state
@@ -230,6 +259,14 @@ export default function PocketPage() {
         setSpeechSupported(false);
       }
       const params = new URLSearchParams(window.location.search);
+
+      // Preferred destination from ?to=levonti / ?to=derek
+      const toSlug = (params.get("to") || "").toLowerCase().trim();
+      if (toSlug && PREFERRED_DESTINATIONS[toSlug]) {
+        setPreferredDestination(PREFERRED_DESTINATIONS[toSlug]);
+      }
+
+      // Optional view override (deep links from /levonti etc.)
       const v = params.get("view");
       if (v === "queue") setMode("queue");
       else if (v === "pa") setMode("pa");
@@ -237,6 +274,8 @@ export default function PocketPage() {
       else if (v === "lookup") setMode("lookup");
       else if (v === "share") setMode("share");
       else if (v === "refer") setMode("refer");
+      else if (v === "code") setMode("code");
+      // Default mode = "refer" (set in initial useState)
     }
   }, []);
 
@@ -525,6 +564,10 @@ export default function PocketPage() {
           specialty_hint: referSpecialty.trim(),
           state: referState.trim(),
           city: referCity.trim(),
+          preferred_npi: preferredDestination?.npi || "",
+          preferred_label: preferredDestination
+            ? `${preferredDestination.display_name} · ${preferredDestination.practice}`
+            : "",
         }),
       });
       const data = await res.json();
@@ -532,8 +575,10 @@ export default function PocketPage() {
       else {
         setReferResult({
           inferred_specialty: data.inferred_specialty,
+          preferred_specialist: data.preferred_specialist || null,
           matched_providers: data.matched_providers || [],
           referral_letter: data.referral_letter,
+          billing_capture: data.billing_capture || null,
         });
       }
     } catch {
@@ -816,23 +861,45 @@ export default function PocketPage() {
             </div>
             <div style={{ fontSize: 14, fontWeight: 700 }}>Pocket</div>
           </div>
-          {queue.length > 0 && (
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            {queue.length > 0 && (
+              <button
+                onClick={() => setMode("queue")}
+                style={{
+                  background: "rgba(239,68,68,0.12)",
+                  border: "1px solid rgba(239,68,68,0.4)",
+                  color: "#fca5a5",
+                  fontSize: 11,
+                  fontWeight: 800,
+                  padding: "6px 12px",
+                  borderRadius: 100,
+                  cursor: "pointer",
+                }}
+              >
+                {queue.length} · {dollarFmt(queueTotal)}
+              </button>
+            )}
             <button
-              onClick={() => setMode("queue")}
+              onClick={() => setShowPowerTabs(!showPowerTabs)}
+              aria-label="More tools"
               style={{
-                background: "rgba(239,68,68,0.12)",
-                border: "1px solid rgba(239,68,68,0.4)",
-                color: "#fca5a5",
-                fontSize: 11,
-                fontWeight: 800,
-                padding: "6px 12px",
-                borderRadius: 100,
+                background: "transparent",
+                border: "1px solid rgba(232,237,242,0.15)",
+                color: textMuted,
+                fontSize: 14,
+                fontWeight: 900,
+                width: 32,
+                height: 32,
+                borderRadius: 8,
                 cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
               }}
             >
-              {queue.length} in queue · {dollarFmt(queueTotal)}
+              ···
             </button>
-          )}
+          </div>
         </div>
 
         {error && (
@@ -1399,15 +1466,64 @@ export default function PocketPage() {
           </>
         )}
 
-        {/* ─── REFER (voice → matched providers + drafted letter) ───────── */}
+        {/* ─── REFER (voice → matched providers + drafted letter + billing) ─ */}
         {mode === "refer" && (
           <>
             <ModeHeader
-              title="Refer a patient"
-              sub="Speak the patient context and the kind of provider you need. Pocket searches NPPES for matches and drafts the referral letter."
+              title={preferredDestination ? `Refer to ${preferredDestination.display_name.replace(/^Dr\. /, "")}` : "Refer a patient"}
+              sub={
+                preferredDestination
+                  ? `Speak the case. Pocket clinically routes — surgical or non-surgical — and prioritizes ${preferredDestination.display_name.split(" ").pop()} when surgery is warranted. Letter drafted, codes captured for your visit.`
+                  : "Speak the patient context. Pocket clinically routes — PT, pain management, or surgical consult — and drafts the referral letter."
+              }
               accent={accent}
               muted={textMuted}
             />
+            {preferredDestination && (
+              <div
+                style={{
+                  background: "linear-gradient(135deg, rgba(140,21,21,0.12), rgba(148,209,211,0.04))",
+                  border: "1px solid rgba(140,21,21,0.4)",
+                  borderRadius: 12,
+                  padding: "12px 16px",
+                  marginBottom: 16,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 12,
+                }}
+              >
+                <div
+                  style={{
+                    width: 8,
+                    height: 8,
+                    borderRadius: "50%",
+                    background: accent,
+                    boxShadow: `0 0 12px ${accent}`,
+                    flexShrink: 0,
+                  }}
+                />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p
+                    style={{
+                      fontSize: 9,
+                      letterSpacing: "0.18em",
+                      textTransform: "uppercase",
+                      color: accent,
+                      fontWeight: 800,
+                      marginBottom: 2,
+                    }}
+                  >
+                    Routed to
+                  </p>
+                  <p style={{ fontSize: 13, color: textMain, fontWeight: 700 }}>
+                    {preferredDestination.display_name}
+                  </p>
+                  <p style={{ fontSize: 11, color: textMuted }}>
+                    {preferredDestination.practice} · {preferredDestination.specialty}
+                  </p>
+                </div>
+              </div>
+            )}
             <div style={{ display: "flex", justifyContent: "center", marginBottom: 18 }}>
               <VoiceButton target="refer" size={140} />
             </div>
@@ -1563,6 +1679,65 @@ export default function PocketPage() {
                     )}
                   </div>
                 )}
+
+                {/* Billing capture for the referrer's own visit — full scope */}
+                {referResult.billing_capture && (referResult.billing_capture.line_items || []).length > 0 && (
+                  <>
+                    <p style={{ ...sectionLabel(accent), marginTop: 14 }}>Codes for your own visit</p>
+                    <div
+                      style={{
+                        background: "rgba(134,239,172,0.06)",
+                        border: "1px solid rgba(134,239,172,0.25)",
+                        borderRadius: 12,
+                        padding: "14px 18px",
+                        marginBottom: 12,
+                      }}
+                    >
+                      <p style={{ fontSize: 10, letterSpacing: "0.15em", textTransform: "uppercase", color: "#86efac", fontWeight: 800, marginBottom: 4 }}>
+                        Wonder Bill — your visit
+                      </p>
+                      <p style={{ fontSize: 26, fontWeight: 900, color: "#86efac", letterSpacing: "-0.5px" }}>
+                        {dollarFmt(referResult.billing_capture.total_visit_dollars)}
+                      </p>
+                    </div>
+                    {(referResult.billing_capture.line_items || []).map((item, i) => (
+                      <CodeCard key={i} item={item} accent={accent} muted={textMuted} />
+                    ))}
+                  </>
+                )}
+
+                {/* ClinicalSwipe upsell — viral loop */}
+                <div
+                  style={{
+                    marginTop: 18,
+                    padding: "16px 18px",
+                    background: "rgba(148,209,211,0.04)",
+                    border: "1px dashed rgba(148,209,211,0.25)",
+                    borderRadius: 12,
+                  }}
+                >
+                  <p style={{ fontSize: 10, letterSpacing: "0.15em", textTransform: "uppercase", color: accent, fontWeight: 800, marginBottom: 6 }}>
+                    List your own practice
+                  </p>
+                  <p style={{ fontSize: 12, color: textMuted, lineHeight: 1.55, marginBottom: 10 }}>
+                    Want patients referred TO you the same way? Get a ClinicalSwipe profile in 60 seconds.
+                    Other surgeons hand out your QR. You receive referrals via Pocket.
+                  </p>
+                  <a
+                    href="https://clinicalswipe.com"
+                    target="_blank"
+                    rel="noopener"
+                    style={{
+                      fontSize: 12,
+                      fontWeight: 800,
+                      color: accent,
+                      textDecoration: "none",
+                      borderBottom: `1px dashed ${accent}`,
+                    }}
+                  >
+                    Get a ClinicalSwipe profile →
+                  </a>
+                </div>
 
                 <button
                   onClick={() => {
@@ -1841,7 +2016,7 @@ export default function PocketPage() {
         </p>
       </div>
 
-      {/* Bottom tab bar */}
+      {/* Bottom tab bar — hidden by default for adoption simplicity, shown via "..." toggle */}
       <nav
         style={{
           position: "fixed",
@@ -1853,7 +2028,7 @@ export default function PocketPage() {
           WebkitBackdropFilter: "blur(20px)",
           borderTop: "1px solid rgba(148,209,211,0.15)",
           padding: "10px 4px max(10px, env(safe-area-inset-bottom))",
-          display: "grid",
+          display: showPowerTabs ? "grid" : "none",
           gridTemplateColumns: "repeat(7, 1fr)",
           gap: 2,
           zIndex: 1000,

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { lookupNpi } from "@/app/api/npi/route";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -14,6 +15,8 @@ interface ReferRequest {
   city?: string;
   state?: string; // "CA"
   zip?: string;
+  preferred_npi?: string; // SurgeonValue customer to surface as top match
+  preferred_label?: string; // Display label for preferred destination
 }
 
 // Lightweight specialty → taxonomy keyword mapping for NPPES filter.
@@ -171,22 +174,65 @@ export async function POST(req: NextRequest) {
   const state = (body.state || "").trim();
   const city = (body.city || "").trim();
 
-  // Run provider search and letter drafting in parallel
-  const [providers, letterResp] = await Promise.allSettled([
+  // Run provider search, letter drafting, AND preferred specialist lookup in parallel
+  const preferredNpi = (body.preferred_npi || "").trim();
+  const preferredLabel = (body.preferred_label || "").trim();
+
+  // Wonder Bill fan-out — captures CPT billing opportunities for the
+  // referring provider's OWN visit. PCPs get value on both sides.
+  const billingPromise = fetch("https://solvinghealth.com/api/chat", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      message: `You are Wonder Bill. The clinical note below is from a primary-care or referring-provider visit (not a surgical encounter). Identify documented-but-unbilled CPT/HCPCS revenue opportunities the referring provider can capture for THIS visit. Use 2026 Medicare allowables. Return ONLY valid JSON. Max 4 line items. Schema: {"note_summary":"one sentence","line_items":[{"cpt_code":"","code_description":"≤8 words","cited_sentence":"≤20 words from note","rule_brief":"≤25 words","medicare_allowable_dollars":0,"compliance_risk":"low|medium|high","biller_note":"≤12 words"}],"total_visit_dollars":0}\n\nNOTE:\n${patientContext}`,
+      channel: "surgeonvalue",
+    }),
+  })
+    .then((r) => r.json())
+    .then((d) => d as { answer?: string });
+
+  const [providers, letterResp, preferredResp, billingResp] = await Promise.allSettled([
     searchNppesProviders(taxonomy, state, city),
     fetch("https://solvinghealth.com/api/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        message: `${REFERRAL_FRAMING}\n\nNEEDED SPECIALTY: ${taxonomy}\nLOCATION: ${city || "any"}, ${state || "any"}\n\nPATIENT CONTEXT:\n${patientContext}`,
+        message: `${REFERRAL_FRAMING}\n\nNEEDED SPECIALTY: ${taxonomy}\nLOCATION: ${city || "any"}, ${state || "any"}${preferredLabel ? `\nPREFERRED RECEIVING PROVIDER: ${preferredLabel}` : ""}\n\nPATIENT CONTEXT:\n${patientContext}`,
         channel: "surgeonvalue",
       }),
     })
       .then((r) => r.json())
       .then((d) => d as { answer?: string; reply?: string; response?: string }),
+    preferredNpi && /^\d{10}$/.test(preferredNpi)
+      ? lookupNpi(preferredNpi)
+      : Promise.resolve(null),
+    billingPromise,
   ]);
 
-  const matched = providers.status === "fulfilled" ? providers.value : [];
+  let matched = providers.status === "fulfilled" ? providers.value : [];
+
+  // Prepend the preferred specialist as the top match if we successfully fetched them
+  if (preferredResp.status === "fulfilled" && preferredResp.value) {
+    const p = preferredResp.value as Record<string, unknown>;
+    if (!(p as { error?: string }).error) {
+      const provider = (p as { provider?: { firstName?: string; lastName?: string; credential?: string } }).provider || {};
+      const specialty = (p as { specialty?: { description?: string } }).specialty || {};
+      const address = (p as { address?: { line1?: string; city?: string; state?: string; zip?: string } }).address || {};
+      const preferredCard: NppesProvider = {
+        npi: String((p as { npi?: string }).npi || preferredNpi),
+        name: `${provider.firstName || ""} ${provider.lastName || ""}`.trim(),
+        credential: provider.credential || "",
+        specialty: specialty.description || "Specialist",
+        city: address.city || "",
+        state: address.state || "",
+        zip: address.zip || "",
+        address: address.line1 || "",
+        phone: (p as { phone?: string }).phone || "",
+      };
+      // De-dupe in case NPPES search also returned them
+      matched = [preferredCard, ...matched.filter((m) => m.npi !== preferredCard.npi)];
+    }
+  }
 
   let letter: Record<string, unknown> | null = null;
   if (letterResp.status === "fulfilled" && letterResp.value) {
@@ -206,10 +252,33 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  const preferredOk = preferredResp.status === "fulfilled" && preferredResp.value && !(preferredResp.value as { error?: string }).error;
+
+  // Parse the Wonder Bill billing capture for the referring provider's visit
+  let billing: Record<string, unknown> | null = null;
+  if (billingResp.status === "fulfilled" && billingResp.value) {
+    const raw = (billingResp.value.answer || "").trim();
+    let jsonText = raw;
+    const fenced = jsonText.match(/```(?:json)?\s*([\s\S]*?)```/);
+    if (fenced) jsonText = fenced[1].trim();
+    const firstBrace = jsonText.indexOf("{");
+    const lastBrace = jsonText.lastIndexOf("}");
+    if (firstBrace !== -1 && lastBrace > firstBrace) {
+      jsonText = jsonText.slice(firstBrace, lastBrace + 1);
+    }
+    try {
+      billing = JSON.parse(jsonText);
+    } catch {
+      billing = null;
+    }
+  }
+
   return NextResponse.json({
     ok: true,
     inferred_specialty: taxonomy,
+    preferred_specialist: preferredOk ? matched[0] : null,
     matched_providers: matched,
     referral_letter: letter,
+    billing_capture: billing,
   });
 }

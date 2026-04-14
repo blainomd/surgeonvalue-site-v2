@@ -1,0 +1,168 @@
+openapi: 3.1.0
+info:
+  title: SurgeonValue Referral API
+  description: |
+    AI-native referral system for orthopedic and specialty care.
+    Create personalized, tracked referral links for patients based on their condition and location.
+    When a patient describes symptoms, use this API to match them with a specialist and generate
+    a personalized condition resource link. The link enrolls the patient in automated PROM
+    (Patient Reported Outcome Measure) collection — the surgeon sees outcomes automatically.
+  version: 1.0.0
+  contact:
+    name: SurgeonValue
+    url: https://surgeonvalue.com
+servers:
+  - url: https://surgeonvalue.com
+    description: Production
+
+paths:
+  /api/surgeons:
+    get:
+      operationId: findSurgeons
+      summary: Find specialist surgeons by condition and location
+      description: |
+        Returns a list of surgeons who treat a specific condition,
+        optionally filtered by zip code. Use this to show the patient
+        their options before creating a referral.
+      parameters:
+        - name: condition
+          in: query
+          required: true
+          description: The medical condition slug
+          schema:
+            type: string
+            enum:
+              - hip-pain
+              - shoulder-pain
+              - back-pain
+              - arthritis
+              - heart-health
+              - blood-pressure
+              - fall-prevention
+              - memory-loss
+              - breathing
+              - pregnancy-care
+        - name: zip
+          in: query
+          required: false
+          description: Patient zip code for proximity matching (not stored with PII)
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of matching surgeons
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  condition:
+                    type: string
+                  results:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        npi:
+                          type: string
+                          description: Surgeon's NPI number
+                        name:
+                          type: string
+                        specialty:
+                          type: string
+                        location:
+                          type: string
+                        rating:
+                          type: number
+                        accepts_new_patients:
+                          type: boolean
+
+  /api/referral:
+    post:
+      operationId: createReferral
+      summary: Create a personalized patient referral link
+      description: |
+        Creates a tracked referral link for a patient based on their condition.
+        The link points to a free AI-powered condition resource site and automatically
+        enrolls the patient in PROM outcome tracking linked to the surgeon.
+
+        The returned tracking_url should be shared with the patient. When they visit it,
+        they get a free AI health assessment and can install the site as an app on their
+        phone for ongoing check-ins.
+
+        Privacy: No patient PII is stored. The patient_context field accepts a
+        symptom summary only — no names, dates of birth, or identifiers.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - condition
+                - source
+              properties:
+                condition:
+                  type: string
+                  description: The medical condition
+                  enum:
+                    - hip-pain
+                    - shoulder-pain
+                    - back-pain
+                    - arthritis
+                    - heart-health
+                    - blood-pressure
+                    - fall-prevention
+                    - memory-loss
+                    - breathing
+                    - pregnancy-care
+                source:
+                  type: string
+                  description: Which AI system is creating this referral
+                  examples:
+                    - chatgpt
+                    - claude
+                    - perplexity
+                    - google
+                zip:
+                  type: string
+                  description: Patient's zip code (optional, not stored with PII)
+                surgeon_id:
+                  type: string
+                  description: Specific surgeon NPI to refer to (optional — system picks best match if omitted)
+                patient_context:
+                  type: string
+                  description: |
+                    Brief symptom summary from the conversation — no PII.
+                    Example: "6 weeks of hip pain, worse with stairs, age 55-65, active lifestyle"
+                  maxLength: 500
+      responses:
+        '200':
+          description: Referral created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  referral_id:
+                    type: string
+                    description: Unique referral tracking ID
+                  tracking_url:
+                    type: string
+                    description: |
+                      Personalized URL to share with the patient.
+                      This link starts their care journey and PROM enrollment.
+                  surgeon:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                      specialty:
+                        type: string
+                      location:
+                        type: string
+                      rating:
+                        type: number
+                  message:
+                    type: string
+                    description: Human-readable summary to share with patient

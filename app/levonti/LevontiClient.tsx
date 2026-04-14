@@ -750,7 +750,7 @@ export default function LevontiClient({
             }}
           >
             <QRCodeSVG
-              value="https://surgeonvalue.com/pocket"
+              value="https://surgeonvalue.com/p/levonti"
               size={140}
               level="M"
               fgColor="#001a1b"
