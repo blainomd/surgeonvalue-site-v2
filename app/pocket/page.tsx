@@ -2,17 +2,23 @@
 
 import { useEffect, useRef, useState } from "react";
 
-// SurgeonValue Pocket — voice-to-code capture for surgeons between cases.
-// Designed to be installed as a PWA on iOS/Android home screens.
+// ─── SurgeonValue Pocket ────────────────────────────────────────────────────
+// 5-tab agentic mobile app for surgeons between cases.
 //
-// Flow:
-//   1. Tap and hold the big mic button
-//   2. Dictate 15-30 seconds describing the encounter
-//   3. Release — Web Speech API transcribes, posts to /api/wonder-bill
-//   4. See the codes, tap "Save to queue"
-//   5. End of day: open queue, tap "Email my biller"
+//   Code   — voice/paste a clinical note → Wonder Bill returns documented-but-
+//            unbilled CPT codes with 2026 Medicare allowables. Save to queue.
+//   PA     — voice/paste a clinical note → SurgeonValue Prior Auth Agent drafts
+//            a peer-to-peer ready medical-necessity letter. Copy to send.
+//   Ask    — voice/type a billing question → SurgeonValue billing expert
+//            answers in 5 seconds. No login.
+//   Lookup — type any NPI or name → live NPPES profile (specialty, location).
+//   Queue  — review captured encounters, email biller in one tap.
 //
-// No login. No backend storage. Everything persists in localStorage.
+// All powered by the same Claude-backed surgeonvalue channel on solvinghealth.com.
+// Designed to be installed as a PWA on iOS/Android home screens. No login,
+// everything persists locally in the browser. ────────────────────────────────
+
+// ─── Types ──────────────────────────────────────────────────────────────────
 
 type LineItem = {
   cited_sentence?: string;
@@ -42,6 +48,47 @@ type QueuedEncounter = {
   patient_label?: string;
 };
 
+type GuidelineCitation = {
+  organization?: string;
+  title?: string;
+  year?: string;
+  recommendation?: string;
+  strength?: string;
+};
+type Rebuttal = { likely_denial?: string; rebuttal?: string };
+type PAResult = {
+  summary?: string;
+  detected_cpt?: string;
+  detected_icd10?: string;
+  key_clinical_findings?: string[];
+  failed_conservative_treatments?: string[];
+  guideline_citations?: GuidelineCitation[];
+  preemptive_rebuttals?: Rebuttal[];
+  letter_body?: string;
+};
+
+type NppesAddress = {
+  address_1?: string;
+  address_2?: string;
+  city?: string;
+  state?: string;
+  postal_code?: string;
+  telephone_number?: string;
+};
+type NppesResult = {
+  number?: string;
+  basic?: {
+    first_name?: string;
+    last_name?: string;
+    credential?: string;
+    sole_proprietor?: string;
+    enumeration_date?: string;
+    last_updated?: string;
+  };
+  taxonomies?: Array<{ desc?: string; primary?: boolean; state?: string }>;
+  addresses?: NppesAddress[];
+};
+
 // Minimal SpeechRecognition typing (not in all TS lib files)
 interface SRCtor {
   new (): SpeechRecognitionLike;
@@ -63,8 +110,21 @@ interface SREventError {
   error: string;
 }
 
+type Mode = "code" | "pa" | "ask" | "lookup" | "share" | "queue";
+
+type PostDraft = {
+  topic?: string;
+  x_draft?: { text?: string; char_count?: number; hashtags?: string[] };
+  linkedin_draft?: { text?: string; hook?: string };
+  phi_check?: string;
+};
+
+// ─── Storage keys ───────────────────────────────────────────────────────────
+
 const QUEUE_KEY = "sv_pocket_queue_v1";
 const BILLER_EMAIL_KEY = "sv_pocket_biller_email_v1";
+
+// ─── Utilities ──────────────────────────────────────────────────────────────
 
 const dollarFmt = (n: number | undefined) =>
   (n ?? 0).toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
@@ -75,20 +135,54 @@ const riskColor: Record<string, string> = {
   high: "#ef4444",
 };
 
+// ─── Page ───────────────────────────────────────────────────────────────────
+
 export default function PocketPage() {
-  const [listening, setListening] = useState(false);
-  const [transcript, setTranscript] = useState("");
-  const [patientLabel, setPatientLabel] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<WonderResult | null>(null);
+  // Mode & shared state
+  const [mode, setMode] = useState<Mode>("code");
   const [error, setError] = useState<string | null>(null);
-  const [queue, setQueue] = useState<QueuedEncounter[]>([]);
-  const [view, setView] = useState<"record" | "queue">("record");
-  const [billerEmail, setBillerEmail] = useState("");
   const [speechSupported, setSpeechSupported] = useState(true);
+  const [listening, setListening] = useState(false);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
 
-  // Load queue + email from localStorage on mount
+  // Code (Wonder Bill) state
+  const [codeTranscript, setCodeTranscript] = useState("");
+  const [patientLabel, setPatientLabel] = useState("");
+  const [codeLoading, setCodeLoading] = useState(false);
+  const [codeResult, setCodeResult] = useState<WonderResult | null>(null);
+
+  // PA state
+  const [paNote, setPaNote] = useState("");
+  const [paProcedure, setPaProcedure] = useState("");
+  const [paPayer, setPaPayer] = useState("");
+  const [paLoading, setPaLoading] = useState(false);
+  const [paResult, setPaResult] = useState<PAResult | null>(null);
+  const [paCopied, setPaCopied] = useState(false);
+
+  // Ask state
+  const [askQuestion, setAskQuestion] = useState("");
+  const [askLoading, setAskLoading] = useState(false);
+  const [askAnswer, setAskAnswer] = useState<string | null>(null);
+
+  // Lookup state
+  const [lookupNpi, setLookupNpi] = useState("");
+  const [lookupLoading, setLookupLoading] = useState(false);
+  const [lookupResult, setLookupResult] = useState<NppesResult | null>(null);
+
+  // Share (post drafter) state
+  const [shareObservation, setShareObservation] = useState("");
+  const [shareLoading, setShareLoading] = useState(false);
+  const [shareResult, setShareResult] = useState<PostDraft | null>(null);
+  const [shareCopied, setShareCopied] = useState<"x" | "li" | null>(null);
+
+  // Queue state
+  const [queue, setQueue] = useState<QueuedEncounter[]>([]);
+  const [billerEmail, setBillerEmail] = useState("");
+
+  // Speech listening target — which textarea the current voice session writes to
+  const [voiceTarget, setVoiceTarget] = useState<"code" | "pa" | "ask" | "share" | null>(null);
+
+  // ── Init ────────────────────────────────────────────────────────────────
   useEffect(() => {
     try {
       const raw = localStorage.getItem(QUEUE_KEY);
@@ -98,16 +192,19 @@ export default function PocketPage() {
     } catch {
       /* ignore */
     }
-    // Check Speech API support
     if (typeof window !== "undefined") {
       const w = window as unknown as { SpeechRecognition?: SRCtor; webkitSpeechRecognition?: SRCtor };
       if (!w.SpeechRecognition && !w.webkitSpeechRecognition) {
         setSpeechSupported(false);
       }
+      const params = new URLSearchParams(window.location.search);
+      const v = params.get("view");
+      if (v === "queue") setMode("queue");
+      else if (v === "pa") setMode("pa");
+      else if (v === "ask") setMode("ask");
+      else if (v === "lookup") setMode("lookup");
+      else if (v === "share") setMode("share");
     }
-    // Honor ?view=queue deep link
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("view") === "queue") setView("queue");
   }, []);
 
   const persistQueue = (next: QueuedEncounter[]) => {
@@ -115,7 +212,7 @@ export default function PocketPage() {
     try {
       localStorage.setItem(QUEUE_KEY, JSON.stringify(next));
     } catch {
-      /* ignore quota */
+      /* ignore */
     }
   };
 
@@ -128,13 +225,15 @@ export default function PocketPage() {
     }
   };
 
-  const startListening = () => {
+  // ── Voice ───────────────────────────────────────────────────────────────
+  const startListening = (target: "code" | "pa" | "ask" | "share") => {
     const w = window as unknown as { SpeechRecognition?: SRCtor; webkitSpeechRecognition?: SRCtor };
     const SR = w.SpeechRecognition || w.webkitSpeechRecognition;
     if (!SR) {
-      setError("Voice not supported on this browser. Type the note below instead.");
+      setError("Voice not supported on this browser. Type below instead.");
       return;
     }
+    setVoiceTarget(target);
     const rec = new SR();
     rec.continuous = true;
     rec.interimResults = true;
@@ -151,14 +250,20 @@ export default function PocketPage() {
           interim += chunk;
         }
       }
-      setTranscript((finalText + " " + interim).trim());
+      const combined = (finalText + " " + interim).trim();
+      if (target === "code") setCodeTranscript(combined);
+      else if (target === "pa") setPaNote(combined);
+      else if (target === "ask") setAskQuestion(combined);
+      else if (target === "share") setShareObservation(combined);
     };
     rec.onerror = (e: SREventError) => {
       setError(`Voice error: ${e.error}`);
       setListening(false);
+      setVoiceTarget(null);
     };
     rec.onend = () => {
       setListening(false);
+      setVoiceTarget(null);
     };
     rec.start();
     recognitionRef.current = rec;
@@ -176,17 +281,19 @@ export default function PocketPage() {
       }
     }
     setListening(false);
+    setVoiceTarget(null);
   };
 
-  const analyze = async () => {
-    const text = transcript.trim();
-    if (!text || text.length < 20) {
+  // ── Code (Wonder Bill) submit ───────────────────────────────────────────
+  const submitCode = async () => {
+    const text = codeTranscript.trim();
+    if (text.length < 20) {
       setError("Dictate at least a sentence or two first.");
       return;
     }
-    setLoading(true);
+    setCodeLoading(true);
     setError(null);
-    setResult(null);
+    setCodeResult(null);
     try {
       const res = await fetch("/api/wonder-bill", {
         method: "POST",
@@ -194,49 +301,174 @@ export default function PocketPage() {
         body: JSON.stringify({ note: text }),
       });
       const data = await res.json();
-      if (!data.ok) {
-        setError(data.error || "Analysis failed.");
-      } else if (data.result) {
-        setResult(data.result);
-      } else {
-        setError("No result returned. Try a longer dictation.");
-      }
+      if (!data.ok) setError(data.error || "Analysis failed.");
+      else if (data.result) setCodeResult(data.result);
+      else setError("No result. Try a longer dictation.");
     } catch {
       setError("Network error. Try again.");
     } finally {
-      setLoading(false);
+      setCodeLoading(false);
     }
   };
 
-  const saveToQueue = () => {
-    if (!result) return;
+  const saveCodeToQueue = () => {
+    if (!codeResult) return;
     const entry: QueuedEncounter = {
       id: `${Date.now()}`,
       timestamp: new Date().toISOString(),
-      transcript,
-      result,
+      transcript: codeTranscript,
+      result: codeResult,
       patient_label: patientLabel.trim() || undefined,
     };
     persistQueue([entry, ...queue]);
-    setResult(null);
-    setTranscript("");
+    setCodeResult(null);
+    setCodeTranscript("");
     setPatientLabel("");
-    setView("queue");
+    setMode("queue");
   };
 
+  // ── PA submit ───────────────────────────────────────────────────────────
+  const submitPA = async () => {
+    const text = paNote.trim();
+    if (text.length < 50) {
+      setError("PA letters need at least a paragraph of clinical context.");
+      return;
+    }
+    setPaLoading(true);
+    setError(null);
+    setPaResult(null);
+    setPaCopied(false);
+    try {
+      const res = await fetch("/api/prior-auth", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          clinicalNote: text,
+          procedure: paProcedure.trim(),
+          payerName: paPayer.trim(),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) setError(data.error || "PA letter generation failed.");
+      else if (data.result) setPaResult(data.result);
+      else setError("No PA letter returned.");
+    } catch {
+      setError("Network error. Try again.");
+    } finally {
+      setPaLoading(false);
+    }
+  };
+
+  const copyPaLetter = async () => {
+    if (!paResult?.letter_body) return;
+    try {
+      await navigator.clipboard.writeText(paResult.letter_body);
+      setPaCopied(true);
+      setTimeout(() => setPaCopied(false), 2400);
+    } catch {
+      /* ignore */
+    }
+  };
+
+  // ── Ask submit ──────────────────────────────────────────────────────────
+  const submitAsk = async () => {
+    const text = askQuestion.trim();
+    if (text.length < 5) {
+      setError("Ask a real question.");
+      return;
+    }
+    setAskLoading(true);
+    setError(null);
+    setAskAnswer(null);
+    try {
+      const res = await fetch("/api/ask", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question: text }),
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) setError(data.error || "Ask failed.");
+      else if (data.answer) setAskAnswer(data.answer);
+      else setError("No answer returned.");
+    } catch {
+      setError("Network error. Try again.");
+    } finally {
+      setAskLoading(false);
+    }
+  };
+
+  // ── Share (post draft) submit ──────────────────────────────────────────
+  const submitShare = async () => {
+    const text = shareObservation.trim();
+    if (text.length < 15) {
+      setError("Dictate or type a real observation to draft from.");
+      return;
+    }
+    setShareLoading(true);
+    setError(null);
+    setShareResult(null);
+    setShareCopied(null);
+    try {
+      const res = await fetch("/api/post-draft", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ observation: text }),
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) setError(data.error || "Drafter failed.");
+      else if (data.result) setShareResult(data.result);
+      else setError("No drafts returned.");
+    } catch {
+      setError("Network error. Try again.");
+    } finally {
+      setShareLoading(false);
+    }
+  };
+
+  const copyDraft = async (which: "x" | "li") => {
+    const text = which === "x" ? shareResult?.x_draft?.text : shareResult?.linkedin_draft?.text;
+    if (!text) return;
+    try {
+      await navigator.clipboard.writeText(text);
+      setShareCopied(which);
+      setTimeout(() => setShareCopied(null), 2400);
+    } catch {
+      /* ignore */
+    }
+  };
+
+  // ── Lookup submit ───────────────────────────────────────────────────────
+  const submitLookup = async () => {
+    const npi = lookupNpi.trim();
+    if (!/^\d{10}$/.test(npi)) {
+      setError("Enter a valid 10-digit NPI.");
+      return;
+    }
+    setLookupLoading(true);
+    setError(null);
+    setLookupResult(null);
+    try {
+      const res = await fetch(`/api/npi?number=${encodeURIComponent(npi)}`);
+      const data = await res.json();
+      if (!res.ok || data.error) setError(data.error || "Lookup failed.");
+      else if (data.results && data.results.length > 0) setLookupResult(data.results[0] as NppesResult);
+      else setError("No NPPES profile found for that NPI.");
+    } catch {
+      setError("Network error. Try again.");
+    } finally {
+      setLookupLoading(false);
+    }
+  };
+
+  // ── Queue actions ───────────────────────────────────────────────────────
   const removeFromQueue = (id: string) => {
     persistQueue(queue.filter((q) => q.id !== id));
   };
-
   const clearQueue = () => {
     if (!confirm("Clear all queued encounters? This cannot be undone.")) return;
     persistQueue([]);
   };
-
-  const queueTotal = queue.reduce(
-    (sum, q) => sum + (q.result?.total_visit_dollars ?? 0),
-    0
-  );
+  const queueTotal = queue.reduce((sum, q) => sum + (q.result?.total_visit_dollars ?? 0), 0);
 
   const emailBiller = () => {
     if (queue.length === 0) {
@@ -256,10 +488,7 @@ export default function PocketPage() {
     lines.push(``);
     queue.forEach((q, i) => {
       const label = q.patient_label || `Encounter ${i + 1}`;
-      const time = new Date(q.timestamp).toLocaleTimeString("en-US", {
-        hour: "numeric",
-        minute: "2-digit",
-      });
+      const time = new Date(q.timestamp).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
       lines.push(`─────────────────────────`);
       lines.push(`${label} · ${time}`);
       lines.push(``);
@@ -289,39 +518,90 @@ export default function PocketPage() {
 
     const subject = `Billing capture — ${queue.length} encounters — ${when}`;
     const body = lines.join("\n");
-    const to = billerEmail.trim();
-    const mailto = `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-    // window.location gives the best UX on iOS Safari standalone mode
+    const mailto = `mailto:${encodeURIComponent(billerEmail)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
     window.location.href = mailto;
   };
 
-  // ─── UI ─────────────────────────────────────────────────────────────────────
-
+  // ─── Theme ──────────────────────────────────────────────────────────────
   const bg = "#001a1b";
   const accent = "#94d1d3";
   const textMain = "#E8EDF2";
   const textMuted = "rgba(232,237,242,0.6)";
 
+  // ─── Inline reusable: voice button ──────────────────────────────────────
+  const VoiceButton = ({ target, size = 160 }: { target: "code" | "pa" | "ask" | "share"; size?: number }) => {
+    const isActive = listening && voiceTarget === target;
+    return (
+      <button
+        onTouchStart={(e) => {
+          e.preventDefault();
+          startListening(target);
+        }}
+        onTouchEnd={(e) => {
+          e.preventDefault();
+          stopListening();
+        }}
+        onMouseDown={() => startListening(target)}
+        onMouseUp={stopListening}
+        onMouseLeave={() => isActive && stopListening()}
+        disabled={!speechSupported}
+        style={{
+          width: size,
+          height: size,
+          borderRadius: "50%",
+          background: isActive ? "#ef4444" : accent,
+          color: bg,
+          border: "none",
+          fontSize: 14,
+          fontWeight: 900,
+          cursor: speechSupported ? "pointer" : "not-allowed",
+          boxShadow: isActive
+            ? "0 0 0 10px rgba(239,68,68,0.2), 0 16px 40px rgba(239,68,68,0.3)"
+            : "0 16px 40px rgba(148,209,211,0.25)",
+          transition: "all 0.15s ease",
+          transform: isActive ? "scale(1.04)" : "scale(1)",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 6,
+          WebkitTapHighlightColor: "transparent",
+          opacity: speechSupported ? 1 : 0.4,
+        }}
+      >
+        <svg width={size * 0.22} height={size * 0.22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+          <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+          <line x1="12" y1="19" x2="12" y2="23" />
+          <line x1="8" y1="23" x2="16" y2="23" />
+        </svg>
+        <span style={{ fontSize: 11, letterSpacing: "-0.2px" }}>
+          {isActive ? "Listening…" : "Hold to speak"}
+        </span>
+      </button>
+    );
+  };
+
+  // ─── Render ─────────────────────────────────────────────────────────────
   return (
     <main
       style={{
         minHeight: "100svh",
         background: bg,
         color: textMain,
-        fontFamily:
-          "-apple-system, BlinkMacSystemFont, 'Inter', 'Manrope', Roboto, sans-serif",
-        padding: "max(28px, env(safe-area-inset-top)) 20px max(28px, env(safe-area-inset-bottom))",
+        fontFamily: "-apple-system, BlinkMacSystemFont, 'Inter', 'Manrope', Roboto, sans-serif",
+        padding: "max(28px, env(safe-area-inset-top)) 18px max(120px, env(safe-area-inset-bottom))",
         boxSizing: "border-box",
       }}
     >
       <div style={{ maxWidth: 460, margin: "0 auto" }}>
-        {/* Top tabs */}
+        {/* Header */}
         <div
           style={{
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
-            marginBottom: 24,
+            marginBottom: 22,
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -336,7 +616,7 @@ export default function PocketPage() {
                 alignItems: "center",
                 justifyContent: "center",
                 fontWeight: 900,
-                fontSize: 16,
+                fontSize: 15,
                 letterSpacing: "-0.5px",
               }}
             >
@@ -344,356 +624,519 @@ export default function PocketPage() {
             </div>
             <div style={{ fontSize: 14, fontWeight: 700 }}>Pocket</div>
           </div>
-          <div style={{ display: "flex", gap: 4, background: "rgba(255,255,255,0.05)", borderRadius: 10, padding: 4 }}>
+          {queue.length > 0 && (
             <button
-              onClick={() => setView("record")}
+              onClick={() => setMode("queue")}
               style={{
-                background: view === "record" ? accent : "transparent",
-                color: view === "record" ? bg : textMain,
-                border: "none",
-                padding: "8px 14px",
-                borderRadius: 8,
-                fontSize: 12,
+                background: "rgba(239,68,68,0.12)",
+                border: "1px solid rgba(239,68,68,0.4)",
+                color: "#fca5a5",
+                fontSize: 11,
                 fontWeight: 800,
+                padding: "6px 12px",
+                borderRadius: 100,
                 cursor: "pointer",
               }}
             >
-              Record
+              {queue.length} in queue · {dollarFmt(queueTotal)}
             </button>
-            <button
-              onClick={() => setView("queue")}
-              style={{
-                background: view === "queue" ? accent : "transparent",
-                color: view === "queue" ? bg : textMain,
-                border: "none",
-                padding: "8px 14px",
-                borderRadius: 8,
-                fontSize: 12,
-                fontWeight: 800,
-                cursor: "pointer",
-                position: "relative",
-              }}
-            >
-              Queue
-              {queue.length > 0 && (
-                <span
-                  style={{
-                    position: "absolute",
-                    top: -4,
-                    right: -4,
-                    background: "#ef4444",
-                    color: "#fff",
-                    borderRadius: 999,
-                    fontSize: 10,
-                    fontWeight: 900,
-                    minWidth: 18,
-                    height: 18,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    padding: "0 4px",
-                  }}
-                >
-                  {queue.length}
-                </span>
-              )}
-            </button>
-          </div>
+          )}
         </div>
 
-        {view === "record" ? (
+        {error && (
+          <div
+            style={{
+              padding: "12px 16px",
+              background: "rgba(239,68,68,0.1)",
+              border: "1px solid rgba(239,68,68,0.3)",
+              borderRadius: 10,
+              color: "#fca5a5",
+              fontSize: 13,
+              marginBottom: 14,
+            }}
+          >
+            {error}
+          </div>
+        )}
+
+        {/* ─── CODE (Wonder Bill) ───────────────────────────────────────── */}
+        {mode === "code" && (
           <>
-            {/* Mic button */}
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: 24 }}>
-              <button
-                onTouchStart={(e) => {
-                  e.preventDefault();
-                  startListening();
-                }}
-                onTouchEnd={(e) => {
-                  e.preventDefault();
-                  stopListening();
-                }}
-                onMouseDown={startListening}
-                onMouseUp={stopListening}
-                onMouseLeave={() => {
-                  if (listening) stopListening();
-                }}
-                disabled={!speechSupported}
-                style={{
-                  width: 200,
-                  height: 200,
-                  borderRadius: "50%",
-                  background: listening ? "#ef4444" : accent,
-                  color: bg,
-                  border: "none",
-                  fontSize: 18,
-                  fontWeight: 900,
-                  cursor: "pointer",
-                  boxShadow: listening
-                    ? "0 0 0 12px rgba(239,68,68,0.2), 0 20px 50px rgba(239,68,68,0.3)"
-                    : "0 20px 50px rgba(148,209,211,0.25)",
-                  transition: "all 0.15s ease",
-                  transform: listening ? "scale(1.05)" : "scale(1)",
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: 8,
-                  WebkitTapHighlightColor: "transparent",
-                }}
-              >
-                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
-                  <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
-                  <line x1="12" y1="19" x2="12" y2="23" />
-                  <line x1="8" y1="23" x2="16" y2="23" />
-                </svg>
-                <span style={{ fontSize: 13, letterSpacing: "-0.2px" }}>
-                  {listening ? "Listening…" : "Hold to dictate"}
-                </span>
-              </button>
-              <p style={{ color: textMuted, fontSize: 12, marginTop: 16, textAlign: "center", maxWidth: 300 }}>
-                Describe the encounter — problems addressed, time spent, procedures performed. 15–30 seconds is plenty.
-              </p>
+            <ModeHeader title="Capture codes" sub="Dictate the encounter. Wonder Bill returns documented-but-unbilled CPT codes." accent={accent} muted={textMuted} />
+            <div style={{ display: "flex", justifyContent: "center", marginBottom: 18 }}>
+              <VoiceButton target="code" />
             </div>
-
-            {/* Transcript */}
-            {(transcript || !speechSupported) && (
-              <div style={{ marginBottom: 16 }}>
-                <p style={{ fontSize: 10, letterSpacing: "0.2em", textTransform: "uppercase", color: textMuted, marginBottom: 6, fontWeight: 800 }}>
-                  Transcript
-                </p>
-                <textarea
-                  value={transcript}
-                  onChange={(e) => setTranscript(e.target.value)}
-                  placeholder={speechSupported ? "Your dictation will appear here — you can edit it before analyzing." : "Voice not supported here — type the note."}
-                  rows={5}
-                  style={{
-                    width: "100%",
-                    background: "rgba(148,209,211,0.04)",
-                    border: "1px solid rgba(148,209,211,0.15)",
-                    borderRadius: 12,
-                    padding: 14,
-                    color: textMain,
-                    fontSize: 14,
-                    fontFamily: "inherit",
-                    outline: "none",
-                    resize: "vertical",
-                    boxSizing: "border-box",
-                  }}
-                />
-              </div>
+            <textarea
+              value={codeTranscript}
+              onChange={(e) => setCodeTranscript(e.target.value)}
+              placeholder="Or type the note here..."
+              rows={5}
+              style={fieldStyle()}
+            />
+            {codeTranscript && (
+              <input
+                value={patientLabel}
+                onChange={(e) => setPatientLabel(e.target.value)}
+                placeholder="Patient label (optional)"
+                style={{ ...fieldStyle(), marginTop: 10, fontSize: 13 }}
+              />
             )}
-
-            {/* Patient label */}
-            {transcript && (
-              <div style={{ marginBottom: 16 }}>
-                <input
-                  value={patientLabel}
-                  onChange={(e) => setPatientLabel(e.target.value)}
-                  placeholder="Patient label (optional) — e.g., Mrs. R. Case 3"
-                  style={{
-                    width: "100%",
-                    background: "rgba(148,209,211,0.04)",
-                    border: "1px solid rgba(148,209,211,0.15)",
-                    borderRadius: 12,
-                    padding: 12,
-                    color: textMain,
-                    fontSize: 14,
-                    fontFamily: "inherit",
-                    outline: "none",
-                    boxSizing: "border-box",
-                  }}
-                />
-              </div>
-            )}
-
-            {/* Analyze */}
-            {transcript && !result && (
-              <button
-                onClick={analyze}
-                disabled={loading}
-                style={{
-                  width: "100%",
-                  padding: "16px 20px",
-                  background: loading ? "rgba(148,209,211,0.3)" : accent,
-                  color: bg,
-                  border: "none",
-                  borderRadius: 12,
-                  fontSize: 15,
-                  fontWeight: 900,
-                  cursor: loading ? "wait" : "pointer",
-                  marginBottom: 12,
-                }}
-              >
-                {loading ? "Reading the note…" : "Find the codes →"}
+            {codeTranscript && !codeResult && (
+              <button onClick={submitCode} disabled={codeLoading} style={primaryBtn(codeLoading, accent, bg)}>
+                {codeLoading ? "Reading the note…" : "Find the codes →"}
               </button>
             )}
 
-            {error && (
-              <div
-                style={{
-                  padding: "12px 16px",
-                  background: "rgba(239,68,68,0.1)",
-                  border: "1px solid rgba(239,68,68,0.3)",
-                  borderRadius: 10,
-                  color: "#fca5a5",
-                  fontSize: 13,
-                  marginBottom: 12,
-                }}
-              >
-                {error}
-              </div>
-            )}
-
-            {/* Result */}
-            {result && (
-              <div style={{ marginTop: 8 }}>
-                {result.note_summary && (
+            {codeResult && (
+              <div style={{ marginTop: 16 }}>
+                {codeResult.note_summary && (
                   <p style={{ fontSize: 12, color: textMuted, fontStyle: "italic", marginBottom: 12 }}>
-                    {result.note_summary}
+                    {codeResult.note_summary}
                   </p>
                 )}
-                {result.global_period_flag === "post-op-global-active" && (
-                  <div
-                    style={{
-                      padding: "10px 14px",
-                      background: "rgba(245,158,11,0.1)",
-                      border: "1px solid rgba(245,158,11,0.35)",
-                      borderRadius: 10,
-                      color: "#fde68a",
-                      fontSize: 12,
-                      marginBottom: 12,
-                      lineHeight: 1.5,
-                    }}
-                  >
-                    <strong>Global period active.</strong> Most post-op E/M is bundled into the 90-day global fee.
-                  </div>
+                {codeResult.global_period_flag === "post-op-global-active" && (
+                  <GlobalPeriodWarning />
                 )}
-                <div
-                  style={{
-                    background: "rgba(148,209,211,0.06)",
-                    border: "1px solid rgba(148,209,211,0.2)",
-                    borderRadius: 12,
-                    padding: "14px 18px",
-                    marginBottom: 12,
-                  }}
-                >
-                  <p style={{ fontSize: 10, letterSpacing: "0.15em", textTransform: "uppercase", color: accent, fontWeight: 800, marginBottom: 4 }}>
-                    This visit
-                  </p>
-                  <p style={{ fontSize: 28, fontWeight: 900, color: accent, letterSpacing: "-0.5px" }}>
-                    {dollarFmt(result.total_visit_dollars)}
-                  </p>
-                </div>
-
-                {(result.line_items || []).map((item, i) => (
-                  <div
-                    key={i}
-                    style={{
-                      background: "rgba(255,255,255,0.025)",
-                      border: "1px solid rgba(255,255,255,0.08)",
-                      borderRadius: 12,
-                      padding: "14px 16px",
-                      marginBottom: 10,
-                    }}
-                  >
-                    <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 8, flexWrap: "wrap" }}>
-                      <span
-                        style={{
-                          background: accent,
-                          color: bg,
-                          padding: "3px 9px",
-                          borderRadius: 5,
-                          fontSize: 11,
-                          fontWeight: 900,
-                          fontFamily: "ui-monospace, monospace",
-                        }}
-                      >
-                        {item.cpt_code}
-                      </span>
-                      <span
-                        style={{
-                          background: "rgba(134,239,172,0.12)",
-                          color: "#86efac",
-                          padding: "3px 9px",
-                          borderRadius: 5,
-                          fontSize: 11,
-                          fontWeight: 800,
-                        }}
-                      >
-                        {dollarFmt(item.medicare_allowable_dollars)}
-                      </span>
-                      <span
-                        style={{
-                          marginLeft: "auto",
-                          fontSize: 9,
-                          letterSpacing: "0.1em",
-                          textTransform: "uppercase",
-                          fontWeight: 800,
-                          color: riskColor[item.compliance_risk || "low"],
-                          border: `1px solid ${riskColor[item.compliance_risk || "low"]}`,
-                          padding: "2px 6px",
-                          borderRadius: 4,
-                        }}
-                      >
-                        {item.compliance_risk}
-                      </span>
-                    </div>
-                    {item.code_description && (
-                      <p style={{ fontSize: 13, fontWeight: 700, marginBottom: 6 }}>{item.code_description}</p>
-                    )}
-                    {item.rule_brief && (
-                      <p style={{ fontSize: 12, color: textMuted, lineHeight: 1.5 }}>{item.rule_brief}</p>
-                    )}
-                  </div>
+                <TotalCard label="This visit" value={dollarFmt(codeResult.total_visit_dollars)} accent={accent} />
+                {(codeResult.line_items || []).map((item, i) => (
+                  <CodeCard key={i} item={item} accent={accent} muted={textMuted} />
                 ))}
-
                 <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
                   <button
                     onClick={() => {
-                      setResult(null);
-                      setTranscript("");
+                      setCodeResult(null);
+                      setCodeTranscript("");
                       setPatientLabel("");
                     }}
-                    style={{
-                      flex: 1,
-                      padding: "14px",
-                      background: "transparent",
-                      border: "1px solid rgba(255,255,255,0.15)",
-                      borderRadius: 10,
-                      color: textMain,
-                      fontSize: 13,
-                      fontWeight: 700,
-                      cursor: "pointer",
-                    }}
+                    style={ghostBtn(textMain)}
                   >
                     Discard
                   </button>
-                  <button
-                    onClick={saveToQueue}
-                    style={{
-                      flex: 2,
-                      padding: "14px",
-                      background: accent,
-                      border: "none",
-                      borderRadius: 10,
-                      color: bg,
-                      fontSize: 13,
-                      fontWeight: 900,
-                      cursor: "pointer",
-                    }}
-                  >
+                  <button onClick={saveCodeToQueue} style={{ ...primaryBtn(false, accent, bg), flex: 2, marginTop: 0 }}>
                     Save to queue →
                   </button>
                 </div>
               </div>
             )}
           </>
-        ) : (
-          // Queue view
+        )}
+
+        {/* ─── PA (Prior Auth letter) ───────────────────────────────────── */}
+        {mode === "pa" && (
           <>
+            <ModeHeader title="Draft a PA letter" sub="Dictate the case. Get a peer-to-peer ready medical-necessity letter with cited guidelines." accent={accent} muted={textMuted} />
+            <div style={{ display: "flex", justifyContent: "center", marginBottom: 18 }}>
+              <VoiceButton target="pa" />
+            </div>
+            <textarea
+              value={paNote}
+              onChange={(e) => setPaNote(e.target.value)}
+              placeholder="Or type/paste the clinical note here..."
+              rows={6}
+              style={fieldStyle()}
+            />
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 10 }}>
+              <input
+                value={paProcedure}
+                onChange={(e) => setPaProcedure(e.target.value)}
+                placeholder="Procedure"
+                style={{ ...fieldStyle(), fontSize: 12 }}
+              />
+              <input
+                value={paPayer}
+                onChange={(e) => setPaPayer(e.target.value)}
+                placeholder="Payer"
+                style={{ ...fieldStyle(), fontSize: 12 }}
+              />
+            </div>
+            {paNote && !paResult && (
+              <button onClick={submitPA} disabled={paLoading} style={primaryBtn(paLoading, accent, bg)}>
+                {paLoading ? "Drafting the letter…" : "Draft the letter →"}
+              </button>
+            )}
+
+            {paResult && (
+              <div style={{ marginTop: 16 }}>
+                {paResult.summary && (
+                  <p style={{ fontSize: 12, color: textMuted, fontStyle: "italic", marginBottom: 12 }}>
+                    {paResult.summary}
+                  </p>
+                )}
+                {(paResult.detected_cpt || paResult.detected_icd10) && (
+                  <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
+                    {paResult.detected_cpt && (
+                      <span style={pill(accent, bg)}>CPT {paResult.detected_cpt}</span>
+                    )}
+                    {paResult.detected_icd10 && (
+                      <span style={pillSubtle(accent)}>ICD-10 {paResult.detected_icd10}</span>
+                    )}
+                  </div>
+                )}
+                {paResult.guideline_citations && paResult.guideline_citations.length > 0 && (
+                  <div style={{ marginBottom: 14 }}>
+                    <p style={sectionLabel(accent)}>Guidelines cited</p>
+                    {paResult.guideline_citations.map((g, i) => (
+                      <div key={i} style={subtleCard()}>
+                        <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 2, flexWrap: "wrap" }}>
+                          {g.organization && <span style={miniPill(accent, bg)}>{g.organization}</span>}
+                          {g.year && <span style={{ fontSize: 10, color: textMuted }}>{g.year}</span>}
+                        </div>
+                        {g.title && (
+                          <p style={{ fontSize: 12, fontWeight: 700, color: textMain, marginTop: 4 }}>{g.title}</p>
+                        )}
+                        {g.recommendation && (
+                          <p style={{ fontSize: 11, color: textMuted, lineHeight: 1.5, marginTop: 2 }}>{g.recommendation}</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {paResult.preemptive_rebuttals && paResult.preemptive_rebuttals.length > 0 && (
+                  <div style={{ marginBottom: 14 }}>
+                    <p style={sectionLabel(accent)}>Likely denials & rebuttals</p>
+                    {paResult.preemptive_rebuttals.map((r, i) => (
+                      <div key={i} style={subtleCard()}>
+                        {r.likely_denial && (
+                          <p style={{ fontSize: 11, color: "#fca5a5", fontWeight: 700 }}>⚠ {r.likely_denial}</p>
+                        )}
+                        {r.rebuttal && (
+                          <p style={{ fontSize: 11, color: textMuted, lineHeight: 1.5, marginTop: 4 }}>{r.rebuttal}</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {paResult.letter_body && (
+                  <div style={{ marginTop: 16 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                      <p style={sectionLabel(accent)}>Medical necessity letter</p>
+                      <button
+                        onClick={copyPaLetter}
+                        style={{
+                          background: paCopied ? "#16a34a" : "#003536",
+                          color: paCopied ? "#fff" : accent,
+                          border: "1px solid rgba(148,209,211,0.25)",
+                          padding: "6px 12px",
+                          borderRadius: 6,
+                          fontSize: 11,
+                          fontWeight: 800,
+                          cursor: "pointer",
+                        }}
+                      >
+                        {paCopied ? "Copied" : "Copy letter"}
+                      </button>
+                    </div>
+                    <pre
+                      style={{
+                        background: "rgba(0,0,0,0.3)",
+                        border: "1px solid rgba(148,209,211,0.15)",
+                        borderRadius: 10,
+                        padding: 14,
+                        fontSize: 11,
+                        color: "rgba(232,237,242,0.9)",
+                        fontFamily: "ui-monospace, monospace",
+                        whiteSpace: "pre-wrap",
+                        lineHeight: 1.6,
+                        overflowX: "auto",
+                        margin: 0,
+                      }}
+                    >
+                      {paResult.letter_body}
+                    </pre>
+                  </div>
+                )}
+                <button
+                  onClick={() => {
+                    setPaResult(null);
+                    setPaNote("");
+                    setPaProcedure("");
+                    setPaPayer("");
+                  }}
+                  style={{ ...ghostBtn(textMain), marginTop: 12, width: "100%" }}
+                >
+                  Start over
+                </button>
+              </div>
+            )}
+          </>
+        )}
+
+        {/* ─── ASK (billing question) ───────────────────────────────────── */}
+        {mode === "ask" && (
+          <>
+            <ModeHeader title="Ask anything" sub="Quick coding or compliance question. 5-second answer from the SurgeonValue billing expert." accent={accent} muted={textMuted} />
+            <div style={{ display: "flex", justifyContent: "center", marginBottom: 18 }}>
+              <VoiceButton target="ask" size={140} />
+            </div>
+            <textarea
+              value={askQuestion}
+              onChange={(e) => setAskQuestion(e.target.value)}
+              placeholder="e.g., Can I bill G2211 with 99215 in a post-op global period?"
+              rows={3}
+              style={fieldStyle()}
+            />
+            {askQuestion && !askAnswer && (
+              <button onClick={submitAsk} disabled={askLoading} style={primaryBtn(askLoading, accent, bg)}>
+                {askLoading ? "Asking the expert…" : "Ask →"}
+              </button>
+            )}
+            {askAnswer && (
+              <div
+                style={{
+                  marginTop: 16,
+                  padding: "16px 18px",
+                  background: "rgba(148,209,211,0.06)",
+                  border: "1px solid rgba(148,209,211,0.2)",
+                  borderRadius: 12,
+                  fontSize: 14,
+                  lineHeight: 1.65,
+                  color: "rgba(232,237,242,0.92)",
+                  whiteSpace: "pre-wrap",
+                }}
+              >
+                {askAnswer}
+              </div>
+            )}
+            {askAnswer && (
+              <button
+                onClick={() => {
+                  setAskAnswer(null);
+                  setAskQuestion("");
+                }}
+                style={{ ...ghostBtn(textMain), marginTop: 12, width: "100%" }}
+              >
+                Ask another
+              </button>
+            )}
+          </>
+        )}
+
+        {/* ─── LOOKUP (NPI) ─────────────────────────────────────────────── */}
+        {mode === "lookup" && (
+          <>
+            <ModeHeader title="NPI lookup" sub="Verify a referral source or another physician. Pulls live from CMS NPPES." accent={accent} muted={textMuted} />
+            <input
+              value={lookupNpi}
+              onChange={(e) => setLookupNpi(e.target.value.replace(/\D/g, "").slice(0, 10))}
+              placeholder="10-digit NPI"
+              inputMode="numeric"
+              maxLength={10}
+              style={{
+                ...fieldStyle(),
+                fontSize: 18,
+                fontFamily: "ui-monospace, monospace",
+                letterSpacing: "0.05em",
+                textAlign: "center",
+              }}
+            />
+            {lookupNpi.length === 10 && !lookupResult && (
+              <button onClick={submitLookup} disabled={lookupLoading} style={primaryBtn(lookupLoading, accent, bg)}>
+                {lookupLoading ? "Looking up…" : "Look up →"}
+              </button>
+            )}
+            {lookupResult && (
+              <div style={{ marginTop: 16 }}>
+                <div
+                  style={{
+                    background: "rgba(148,209,211,0.06)",
+                    border: "1px solid rgba(148,209,211,0.2)",
+                    borderRadius: 12,
+                    padding: "18px 20px",
+                    marginBottom: 12,
+                  }}
+                >
+                  <p style={{ fontSize: 11, color: textMuted, marginBottom: 4 }}>NPI {lookupResult.number}</p>
+                  <p style={{ fontSize: 22, fontWeight: 900, letterSpacing: "-0.5px", marginBottom: 4 }}>
+                    {lookupResult.basic?.first_name} {lookupResult.basic?.last_name}
+                    {lookupResult.basic?.credential && (
+                      <span style={{ color: accent, fontSize: 14, marginLeft: 8 }}>
+                        {lookupResult.basic.credential}
+                      </span>
+                    )}
+                  </p>
+                  {lookupResult.taxonomies && lookupResult.taxonomies[0]?.desc && (
+                    <p style={{ fontSize: 13, color: textMain }}>{lookupResult.taxonomies[0].desc}</p>
+                  )}
+                </div>
+                {lookupResult.addresses && lookupResult.addresses[0] && (
+                  <div style={subtleCard()}>
+                    <p style={sectionLabel(accent)}>Practice address</p>
+                    <p style={{ fontSize: 13, color: textMain, lineHeight: 1.5 }}>
+                      {lookupResult.addresses[0].address_1}
+                      {lookupResult.addresses[0].address_2 && <>, {lookupResult.addresses[0].address_2}</>}
+                      <br />
+                      {lookupResult.addresses[0].city}, {lookupResult.addresses[0].state} {lookupResult.addresses[0].postal_code}
+                    </p>
+                    {lookupResult.addresses[0].telephone_number && (
+                      <a
+                        href={`tel:${lookupResult.addresses[0].telephone_number}`}
+                        style={{ color: accent, fontSize: 13, fontWeight: 700, marginTop: 8, display: "inline-block", textDecoration: "none" }}
+                      >
+                        {lookupResult.addresses[0].telephone_number} →
+                      </a>
+                    )}
+                  </div>
+                )}
+                <button
+                  onClick={() => {
+                    setLookupResult(null);
+                    setLookupNpi("");
+                  }}
+                  style={{ ...ghostBtn(textMain), marginTop: 12, width: "100%" }}
+                >
+                  Look up another
+                </button>
+              </div>
+            )}
+          </>
+        )}
+
+        {/* ─── SHARE (post drafter) ─────────────────────────────────────── */}
+        {mode === "share" && (
+          <>
+            <ModeHeader title="Draft a post" sub="Dictate something from your day. Get a polished X post and a LinkedIn post — PHI-stripped, in your voice." accent={accent} muted={textMuted} />
+            <div style={{ display: "flex", justifyContent: "center", marginBottom: 18 }}>
+              <VoiceButton target="share" size={140} />
+            </div>
+            <textarea
+              value={shareObservation}
+              onChange={(e) => setShareObservation(e.target.value)}
+              placeholder="e.g., Just used Wonder Bill on a knee injection visit, found three codes I'd never billed including G2211. The note was 7 sentences long."
+              rows={4}
+              style={fieldStyle()}
+            />
+            {shareObservation && !shareResult && (
+              <button onClick={submitShare} disabled={shareLoading} style={primaryBtn(shareLoading, accent, bg)}>
+                {shareLoading ? "Drafting…" : "Draft my posts →"}
+              </button>
+            )}
+            {shareResult && (
+              <div style={{ marginTop: 16 }}>
+                {shareResult.topic && (
+                  <p style={{ fontSize: 12, color: textMuted, fontStyle: "italic", marginBottom: 12 }}>
+                    {shareResult.topic}
+                  </p>
+                )}
+
+                {shareResult.x_draft?.text && (
+                  <div
+                    style={{
+                      background: "rgba(148,209,211,0.06)",
+                      border: "1px solid rgba(148,209,211,0.2)",
+                      borderRadius: 12,
+                      padding: "16px 18px",
+                      marginBottom: 12,
+                    }}
+                  >
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                      <p style={sectionLabel(accent)}>For X / Twitter</p>
+                      <button
+                        onClick={() => copyDraft("x")}
+                        style={{
+                          background: shareCopied === "x" ? "#16a34a" : "#003536",
+                          color: shareCopied === "x" ? "#fff" : accent,
+                          border: "1px solid rgba(148,209,211,0.25)",
+                          padding: "6px 12px",
+                          borderRadius: 6,
+                          fontSize: 11,
+                          fontWeight: 800,
+                          cursor: "pointer",
+                        }}
+                      >
+                        {shareCopied === "x" ? "Copied" : "Copy"}
+                      </button>
+                    </div>
+                    <p style={{ fontSize: 14, color: textMain, lineHeight: 1.55, whiteSpace: "pre-wrap", marginBottom: 8 }}>
+                      {shareResult.x_draft.text}
+                    </p>
+                    {shareResult.x_draft.hashtags && shareResult.x_draft.hashtags.length > 0 && (
+                      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 8 }}>
+                        {shareResult.x_draft.hashtags.map((h, i) => (
+                          <span key={i} style={{ fontSize: 11, color: accent, fontWeight: 700 }}>
+                            {h}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    {shareResult.x_draft.char_count !== undefined && (
+                      <p style={{ fontSize: 10, color: textMuted }}>
+                        {shareResult.x_draft.char_count} / 280 characters
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {shareResult.linkedin_draft?.text && (
+                  <div
+                    style={{
+                      background: "rgba(255,255,255,0.025)",
+                      border: "1px solid rgba(255,255,255,0.08)",
+                      borderRadius: 12,
+                      padding: "16px 18px",
+                      marginBottom: 12,
+                    }}
+                  >
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                      <p style={sectionLabel(accent)}>For LinkedIn</p>
+                      <button
+                        onClick={() => copyDraft("li")}
+                        style={{
+                          background: shareCopied === "li" ? "#16a34a" : "#003536",
+                          color: shareCopied === "li" ? "#fff" : accent,
+                          border: "1px solid rgba(148,209,211,0.25)",
+                          padding: "6px 12px",
+                          borderRadius: 6,
+                          fontSize: 11,
+                          fontWeight: 800,
+                          cursor: "pointer",
+                        }}
+                      >
+                        {shareCopied === "li" ? "Copied" : "Copy"}
+                      </button>
+                    </div>
+                    <p style={{ fontSize: 13, color: textMain, lineHeight: 1.65, whiteSpace: "pre-wrap" }}>
+                      {shareResult.linkedin_draft.text}
+                    </p>
+                  </div>
+                )}
+
+                {shareResult.phi_check && (
+                  <div
+                    style={{
+                      padding: "10px 14px",
+                      background: "rgba(34,197,94,0.06)",
+                      border: "1px solid rgba(34,197,94,0.25)",
+                      borderRadius: 8,
+                      marginBottom: 12,
+                    }}
+                  >
+                    <p style={{ fontSize: 10, color: "#86efac", fontWeight: 800, marginBottom: 4, letterSpacing: "0.1em", textTransform: "uppercase" }}>
+                      PHI check
+                    </p>
+                    <p style={{ fontSize: 11, color: "rgba(232,237,242,0.7)", lineHeight: 1.5 }}>
+                      {shareResult.phi_check}
+                    </p>
+                  </div>
+                )}
+
+                <button
+                  onClick={() => {
+                    setShareResult(null);
+                    setShareObservation("");
+                  }}
+                  style={{ ...ghostBtn(textMain), width: "100%" }}
+                >
+                  Draft another
+                </button>
+              </div>
+            )}
+          </>
+        )}
+
+        {/* ─── QUEUE ────────────────────────────────────────────────────── */}
+        {mode === "queue" && (
+          <>
+            <ModeHeader title="Today's queue" sub="Encounters captured today, ready to send to your biller." accent={accent} muted={textMuted} />
             <div
               style={{
                 background: "rgba(148,209,211,0.06)",
@@ -703,123 +1146,77 @@ export default function PocketPage() {
                 marginBottom: 16,
               }}
             >
-              <p style={{ fontSize: 10, letterSpacing: "0.15em", textTransform: "uppercase", color: accent, fontWeight: 800, marginBottom: 6 }}>
-                Today&apos;s queue
-              </p>
-              <p style={{ fontSize: 30, fontWeight: 900, color: accent, letterSpacing: "-0.5px" }}>
+              <p style={sectionLabel(accent)}>Total ready to send</p>
+              <p style={{ fontSize: 30, fontWeight: 900, color: accent, letterSpacing: "-0.5px", marginTop: 4 }}>
                 {dollarFmt(queueTotal)}
               </p>
               <p style={{ fontSize: 12, color: textMuted, marginTop: 4 }}>
-                {queue.length} encounter{queue.length !== 1 ? "s" : ""} ready to send
+                {queue.length} encounter{queue.length !== 1 ? "s" : ""}
               </p>
             </div>
-
-            {/* Biller email */}
-            <div style={{ marginBottom: 16 }}>
-              <label style={{ fontSize: 10, letterSpacing: "0.15em", textTransform: "uppercase", color: textMuted, fontWeight: 800, display: "block", marginBottom: 6 }}>
-                Biller email
-              </label>
+            <div style={{ marginBottom: 14 }}>
+              <label style={{ ...sectionLabel(textMuted), display: "block", marginBottom: 6 }}>Biller email</label>
               <input
                 type="email"
                 value={billerEmail}
                 onChange={(e) => saveBillerEmail(e.target.value)}
                 placeholder="biller@yourclinic.com"
-                style={{
-                  width: "100%",
-                  background: "rgba(148,209,211,0.04)",
-                  border: "1px solid rgba(148,209,211,0.15)",
-                  borderRadius: 10,
-                  padding: 12,
-                  color: textMain,
-                  fontSize: 14,
-                  fontFamily: "inherit",
-                  outline: "none",
-                  boxSizing: "border-box",
-                }}
+                style={fieldStyle()}
               />
             </div>
-
             <button
               onClick={emailBiller}
               disabled={queue.length === 0}
-              style={{
-                width: "100%",
-                padding: "16px 20px",
-                background: queue.length === 0 ? "rgba(148,209,211,0.2)" : accent,
-                color: queue.length === 0 ? textMuted : bg,
-                border: "none",
-                borderRadius: 12,
-                fontSize: 15,
-                fontWeight: 900,
-                cursor: queue.length === 0 ? "not-allowed" : "pointer",
-                marginBottom: 16,
-              }}
+              style={{ ...primaryBtn(false, accent, bg), opacity: queue.length === 0 ? 0.4 : 1 }}
             >
               Email my biller →
             </button>
 
             {queue.length === 0 ? (
-              <p style={{ color: textMuted, fontSize: 13, textAlign: "center", marginTop: 40 }}>
-                Queue is empty. Hit Record to capture your first encounter.
+              <p style={{ color: textMuted, fontSize: 13, textAlign: "center", marginTop: 30 }}>
+                Queue is empty. Capture your first encounter from the Code tab.
               </p>
             ) : (
               <>
-                {queue.map((q) => (
-                  <div
-                    key={q.id}
-                    style={{
-                      background: "rgba(255,255,255,0.025)",
-                      border: "1px solid rgba(255,255,255,0.08)",
-                      borderRadius: 12,
-                      padding: 16,
-                      marginBottom: 10,
-                    }}
-                  >
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 }}>
-                      <div>
-                        <p style={{ fontSize: 13, fontWeight: 800 }}>{q.patient_label || "Encounter"}</p>
-                        <p style={{ fontSize: 11, color: textMuted }}>
-                          {new Date(q.timestamp).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
+                <div style={{ marginTop: 18 }}>
+                  {queue.map((q) => (
+                    <div key={q.id} style={subtleCard()}>
+                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                        <div>
+                          <p style={{ fontSize: 13, fontWeight: 800 }}>{q.patient_label || "Encounter"}</p>
+                          <p style={{ fontSize: 11, color: textMuted }}>
+                            {new Date(q.timestamp).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
+                          </p>
+                        </div>
+                        <p style={{ fontSize: 16, fontWeight: 900, color: accent }}>
+                          {dollarFmt(q.result.total_visit_dollars)}
                         </p>
                       </div>
-                      <p style={{ fontSize: 16, fontWeight: 900, color: accent }}>
-                        {dollarFmt(q.result.total_visit_dollars)}
-                      </p>
+                      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 6 }}>
+                        {(q.result.line_items || []).map((it, i) => (
+                          <span key={i} style={miniPillSubtle(accent)}>
+                            {it.cpt_code}
+                          </span>
+                        ))}
+                      </div>
+                      <button
+                        onClick={() => removeFromQueue(q.id)}
+                        style={{
+                          fontSize: 10,
+                          color: textMuted,
+                          background: "transparent",
+                          border: "none",
+                          cursor: "pointer",
+                          padding: 0,
+                          marginTop: 8,
+                          textDecoration: "underline",
+                        }}
+                      >
+                        Remove
+                      </button>
                     </div>
-                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 6 }}>
-                      {(q.result.line_items || []).map((it, i) => (
-                        <span
-                          key={i}
-                          style={{
-                            fontSize: 10,
-                            fontFamily: "ui-monospace, monospace",
-                            background: "rgba(148,209,211,0.12)",
-                            color: accent,
-                            padding: "2px 6px",
-                            borderRadius: 4,
-                            fontWeight: 800,
-                          }}
-                        >
-                          {it.cpt_code}
-                        </span>
-                      ))}
-                    </div>
-                    <button
-                      onClick={() => removeFromQueue(q.id)}
-                      style={{
-                        fontSize: 10,
-                        color: textMuted,
-                        background: "transparent",
-                        border: "none",
-                        cursor: "pointer",
-                        padding: 0,
-                        textDecoration: "underline",
-                      }}
-                    >
-                      Remove
-                    </button>
-                  </div>
-                ))}
+                  ))}
+                </div>
                 <button
                   onClick={clearQueue}
                   style={{
@@ -832,7 +1229,7 @@ export default function PocketPage() {
                     fontSize: 12,
                     fontWeight: 700,
                     cursor: "pointer",
-                    marginTop: 10,
+                    marginTop: 12,
                   }}
                 >
                   Clear queue
@@ -842,13 +1239,12 @@ export default function PocketPage() {
           </>
         )}
 
-        {/* Footer hint */}
         <p
           style={{
             fontSize: 10,
             color: "rgba(232,237,242,0.35)",
             textAlign: "center",
-            marginTop: 40,
+            marginTop: 32,
             lineHeight: 1.6,
           }}
         >
@@ -857,6 +1253,283 @@ export default function PocketPage() {
           Everything stays on your device. No signup.
         </p>
       </div>
+
+      {/* Bottom tab bar */}
+      <nav
+        style={{
+          position: "fixed",
+          bottom: 0,
+          left: 0,
+          right: 0,
+          background: "rgba(0,26,27,0.92)",
+          backdropFilter: "blur(20px)",
+          WebkitBackdropFilter: "blur(20px)",
+          borderTop: "1px solid rgba(148,209,211,0.15)",
+          padding: "10px 6px max(10px, env(safe-area-inset-bottom))",
+          display: "grid",
+          gridTemplateColumns: "repeat(6, 1fr)",
+          gap: 2,
+          zIndex: 1000,
+        }}
+      >
+        {(
+          [
+            { id: "code", label: "Code", icon: "$" },
+            { id: "pa", label: "PA", icon: "PA" },
+            { id: "ask", label: "Ask", icon: "?" },
+            { id: "lookup", label: "Find", icon: "ID" },
+            { id: "share", label: "Share", icon: "X" },
+            { id: "queue", label: "Queue", icon: "Q", badge: queue.length },
+          ] as const
+        ).map((t) => (
+          <button
+            key={t.id}
+            onClick={() => setMode(t.id as Mode)}
+            style={{
+              background: "transparent",
+              border: "none",
+              color: mode === t.id ? accent : "rgba(232,237,242,0.55)",
+              padding: "8px 4px",
+              cursor: "pointer",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: 4,
+              position: "relative",
+            }}
+          >
+            <div
+              style={{
+                width: 30,
+                height: 30,
+                borderRadius: 8,
+                background: mode === t.id ? accent : "rgba(148,209,211,0.08)",
+                color: mode === t.id ? bg : accent,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: 12,
+                fontWeight: 900,
+                letterSpacing: "-0.3px",
+              }}
+            >
+              {t.icon}
+            </div>
+            <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "-0.1px" }}>{t.label}</span>
+            {"badge" in t && t.badge && t.badge > 0 ? (
+              <span
+                style={{
+                  position: "absolute",
+                  top: 4,
+                  right: "calc(50% - 18px)",
+                  background: "#ef4444",
+                  color: "#fff",
+                  borderRadius: 999,
+                  fontSize: 9,
+                  fontWeight: 900,
+                  minWidth: 14,
+                  height: 14,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  padding: "0 3px",
+                }}
+              >
+                {t.badge}
+              </span>
+            ) : null}
+          </button>
+        ))}
+      </nav>
     </main>
   );
 }
+
+// ─── Inline helpers ─────────────────────────────────────────────────────────
+
+function ModeHeader({ title, sub, accent, muted }: { title: string; sub: string; accent: string; muted: string }) {
+  return (
+    <div style={{ marginBottom: 18 }}>
+      <p style={{ fontSize: 10, letterSpacing: "0.2em", textTransform: "uppercase", color: accent, fontWeight: 800, marginBottom: 6 }}>
+        SurgeonValue Pocket
+      </p>
+      <h1 style={{ fontSize: 24, fontWeight: 900, letterSpacing: "-0.8px", lineHeight: 1.1, marginBottom: 6 }}>
+        {title}
+      </h1>
+      <p style={{ fontSize: 12, color: muted, lineHeight: 1.5 }}>{sub}</p>
+    </div>
+  );
+}
+
+function GlobalPeriodWarning() {
+  return (
+    <div
+      style={{
+        padding: "10px 14px",
+        background: "rgba(245,158,11,0.1)",
+        border: "1px solid rgba(245,158,11,0.35)",
+        borderRadius: 10,
+        color: "#fde68a",
+        fontSize: 12,
+        marginBottom: 12,
+        lineHeight: 1.5,
+      }}
+    >
+      <strong>Global period active.</strong> Most post-op E/M is bundled into the 90-day global fee.
+    </div>
+  );
+}
+
+function TotalCard({ label, value, accent }: { label: string; value: string; accent: string }) {
+  return (
+    <div
+      style={{
+        background: "rgba(148,209,211,0.06)",
+        border: "1px solid rgba(148,209,211,0.2)",
+        borderRadius: 12,
+        padding: "14px 18px",
+        marginBottom: 12,
+      }}
+    >
+      <p style={{ fontSize: 10, letterSpacing: "0.15em", textTransform: "uppercase", color: accent, fontWeight: 800, marginBottom: 4 }}>
+        {label}
+      </p>
+      <p style={{ fontSize: 28, fontWeight: 900, color: accent, letterSpacing: "-0.5px" }}>{value}</p>
+    </div>
+  );
+}
+
+function CodeCard({ item, accent, muted }: { item: LineItem; accent: string; muted: string }) {
+  return (
+    <div
+      style={{
+        background: "rgba(255,255,255,0.025)",
+        border: "1px solid rgba(255,255,255,0.08)",
+        borderRadius: 12,
+        padding: "14px 16px",
+        marginBottom: 10,
+      }}
+    >
+      <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 8, flexWrap: "wrap" }}>
+        <span style={pill(accent, "#001a1b")}>{item.cpt_code}</span>
+        <span style={{ background: "rgba(134,239,172,0.12)", color: "#86efac", padding: "3px 9px", borderRadius: 5, fontSize: 11, fontWeight: 800 }}>
+          ${(item.medicare_allowable_dollars || 0).toFixed(0)}
+        </span>
+        <span
+          style={{
+            marginLeft: "auto",
+            fontSize: 9,
+            letterSpacing: "0.1em",
+            textTransform: "uppercase",
+            fontWeight: 800,
+            color: riskColor[item.compliance_risk || "low"],
+            border: `1px solid ${riskColor[item.compliance_risk || "low"]}`,
+            padding: "2px 6px",
+            borderRadius: 4,
+          }}
+        >
+          {item.compliance_risk}
+        </span>
+      </div>
+      {item.code_description && <p style={{ fontSize: 13, fontWeight: 700, marginBottom: 6 }}>{item.code_description}</p>}
+      {item.rule_brief && <p style={{ fontSize: 12, color: muted, lineHeight: 1.5 }}>{item.rule_brief}</p>}
+    </div>
+  );
+}
+
+// ─── Style helpers ──────────────────────────────────────────────────────────
+
+const fieldStyle = (): React.CSSProperties => ({
+  width: "100%",
+  background: "rgba(148,209,211,0.04)",
+  border: "1px solid rgba(148,209,211,0.15)",
+  borderRadius: 12,
+  padding: 14,
+  color: "#E8EDF2",
+  fontSize: 14,
+  fontFamily: "inherit",
+  outline: "none",
+  resize: "vertical",
+  boxSizing: "border-box",
+});
+
+const primaryBtn = (loading: boolean, accent: string, bg: string): React.CSSProperties => ({
+  width: "100%",
+  padding: "14px 20px",
+  background: loading ? "rgba(148,209,211,0.3)" : accent,
+  color: bg,
+  border: "none",
+  borderRadius: 12,
+  fontSize: 14,
+  fontWeight: 900,
+  cursor: loading ? "wait" : "pointer",
+  marginTop: 12,
+});
+
+const ghostBtn = (textMain: string): React.CSSProperties => ({
+  flex: 1,
+  padding: "14px",
+  background: "transparent",
+  border: "1px solid rgba(255,255,255,0.15)",
+  borderRadius: 10,
+  color: textMain,
+  fontSize: 13,
+  fontWeight: 700,
+  cursor: "pointer",
+});
+
+const subtleCard = (): React.CSSProperties => ({
+  background: "rgba(255,255,255,0.025)",
+  border: "1px solid rgba(255,255,255,0.08)",
+  borderRadius: 10,
+  padding: "12px 14px",
+  marginBottom: 8,
+});
+
+const sectionLabel = (color: string): React.CSSProperties => ({
+  fontSize: 10,
+  letterSpacing: "0.15em",
+  textTransform: "uppercase",
+  color,
+  fontWeight: 800,
+  marginBottom: 6,
+});
+
+const pill = (bg: string, fg: string): React.CSSProperties => ({
+  background: bg,
+  color: fg,
+  padding: "4px 10px",
+  borderRadius: 6,
+  fontSize: 11,
+  fontWeight: 900,
+  fontFamily: "ui-monospace, monospace",
+});
+
+const pillSubtle = (color: string): React.CSSProperties => ({
+  background: "rgba(148,209,211,0.12)",
+  color,
+  padding: "4px 10px",
+  borderRadius: 6,
+  fontSize: 11,
+  fontWeight: 800,
+  fontFamily: "ui-monospace, monospace",
+});
+
+const miniPill = (bg: string, fg: string): React.CSSProperties => ({
+  background: bg,
+  color: fg,
+  padding: "2px 6px",
+  borderRadius: 4,
+  fontSize: 9,
+  fontWeight: 900,
+});
+
+const miniPillSubtle = (color: string): React.CSSProperties => ({
+  fontSize: 10,
+  fontFamily: "ui-monospace, monospace",
+  background: "rgba(148,209,211,0.12)",
+  color,
+  padding: "2px 6px",
+  borderRadius: 4,
+  fontWeight: 800,
+});

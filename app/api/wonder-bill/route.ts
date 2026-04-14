@@ -7,11 +7,29 @@ export const dynamic = "force-dynamic";
 // Server-side proxy to the solvinghealth.com/api/chat `surgeonvalue` channel, which is
 // already wired to a Claude-backed orthopedic billing expert.
 
+const CODE_REFERENCE_2026 = `AUTHORITATIVE 2026 CODE REFERENCE — use these definitions and allowables, do not paraphrase or guess:
+- G2211: Visit complexity add-on for E/M, longitudinal care of complex condition. ~$16. NOT remote monitoring.
+- 99417: Prolonged office visit add-on, each 15 min beyond 99215 total time.
+- 99490: CCM first 20 min/month clinical staff time. ~$62.
+- 99491: CCM first 30 min/month physician time. ~$83.
+- 99492: BHI initial 70 min/month. ~$140-160.
+- 99493: BHI subsequent 60 min/month. ~$120.
+- 99495: TCM moderate, within 14d post-discharge. ~$185.
+- 99496: TCM high, within 7d post-discharge. ~$245.
+- 98975-77: RTM device setup/supply. ~$19-56.
+- 98980-81: RTM treatment management 20 min. ~$48-39.
+- 99453-58: RPM (remote PHYSIOLOGIC monitoring) setup, supply, treatment management.
+- 20610: Major joint injection WITHOUT imaging. ~$66.
+- 20611: Major joint injection WITH ultrasound + permanent recording. ~$104.
+- Modifier 24: Unrelated E/M during global. Modifier 25: Distinct E/M same day as procedure. Modifier 57: Decision for surgery.`;
+
 const SYSTEM_FRAMING = `You are Wonder Bill, an orthopedic billing expert using 2026 Medicare rules.
+
+${CODE_REFERENCE_2026}
 
 Analyze the clinical note below. Identify documented-but-unbilled revenue opportunities. Do NOT suggest codes the documentation cannot support. If the note is a 90-day post-op global period visit, most E/M is bundled — call that out explicitly in global_period_flag.
 
-Categories to scan: G2211, TCM 99495/96, CCM 99490/91, BHI 99492/93, RTM 98975-77, PCM 99426/27, prolonged 99417, MDM complexity, procedure add-ons (20610/11), modifier-25 distinct services.
+Categories to scan: G2211, TCM 99495/96, CCM 99490/91, BHI 99492/93, RTM 98975-77 / 98980-81, prolonged 99417, MDM complexity, procedure add-ons (20610/11), modifier-25 distinct services.
 
 RULES — RESPOND WITH VALID JSON ONLY. NO MARKDOWN. NO PROSE. BE EXTREMELY TERSE.
 - Max 4 line_items (pick the 4 highest-confidence opportunities)
