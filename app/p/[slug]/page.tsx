@@ -26,17 +26,13 @@ const PROFILES: Record<string, ProfileEntry> = {
     slug: "levonti",
     npi: "1104445147",
     practice: "Stanford Orthopaedic Surgery",
-    about:
-      "Stanford-trained orthopaedic surgeon focused on adult reconstruction, knee preservation, and joint replacement. Building the operational AI layer for ortho practice — billing intelligence, longitudinal complexity capture, and a referral network that makes both sides faster.",
     subspecialty_focus: [
       "Adult reconstruction",
-      "Knee OA — conservative + surgical",
+      "Knee OA",
       "Total knee arthroplasty",
       "Hip arthroplasty",
-      "Cartilage preservation",
     ],
-    insurances_accepted: ["Medicare", "Most commercial PPO", "Stanford Health Care plans"],
-    next_available: "Within 2 weeks for most referrals",
+    next_available: "Within 2 weeks",
   },
 };
 
@@ -59,7 +55,22 @@ interface NppesData {
 
 export default async function ProfilePage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const entry = PROFILES[slug];
+  const slugLower = slug.toLowerCase();
+
+  // Resolve to an entry: curated profile (vanity slug) OR raw NPI fallback
+  let entry: ProfileEntry | null = PROFILES[slugLower] || null;
+  let isOnTheFly = false;
+
+  if (!entry && /^\d{10}$/.test(slug)) {
+    // Generate an on-the-fly entry for any 10-digit NPI
+    entry = {
+      slug,
+      npi: slug,
+      practice: "",
+    };
+    isOnTheFly = true;
+  }
+
   if (!entry) notFound();
 
   let nppes: NppesData | null = null;
@@ -67,6 +78,12 @@ export default async function ProfilePage({ params }: { params: Promise<{ slug: 
     nppes = (await lookupNpi(entry.npi)) as NppesData;
   } catch {
     nppes = null;
+  }
+
+  // For on-the-fly profiles, derive the practice line from NPPES data
+  if (isOnTheFly && nppes) {
+    const addr = nppes.address || {};
+    entry.practice = [addr.city, addr.state].filter(Boolean).join(", ") || "Practice details from CMS NPPES";
   }
 
   const provider = nppes?.provider || {};

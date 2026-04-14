@@ -157,14 +157,13 @@ export default function ProfileClient(props: Props) {
             fontWeight: 900,
             letterSpacing: "-0.3px",
             boxShadow: "0 16px 40px rgba(148,209,211,0.2)",
-            marginBottom: 12,
+            marginBottom: 8,
           }}
         >
-          Refer a patient through Pocket →
+          Refer a patient →
         </a>
-        <p style={{ fontSize: 11, color: textMuted, textAlign: "center", marginBottom: 36, lineHeight: 1.5 }}>
-          Voice or paste the case. Pocket clinically routes — PT, pain management, or surgical consult — and
-          drafts the letter. PHI-stripped. No login.
+        <p style={{ fontSize: 11, color: textMuted, textAlign: "center", marginBottom: 32 }}>
+          Voice or paste. No login.
         </p>
 
         {/* Subspecialty focus */}
@@ -318,9 +317,6 @@ export default function ProfileClient(props: Props) {
             >
               Hand-off QR
             </p>
-            <p style={{ fontSize: 13, fontWeight: 700, color: textMain, marginBottom: 6, lineHeight: 1.4 }}>
-              Show this QR. They scan. They land in Pocket pre-routed to {props.fullName.split(" ")[0]}.
-            </p>
             <p style={{ fontSize: 10, color: textMuted, fontFamily: "ui-monospace, monospace" }}>
               {profileUrl.replace("https://", "")}
             </p>
@@ -334,11 +330,9 @@ export default function ProfileClient(props: Props) {
             color: "rgba(232,237,242,0.3)",
             textAlign: "center",
             marginTop: 32,
-            lineHeight: 1.6,
           }}
         >
-          SurgeonValue · The physician network. Real CMS NPPES data, real routing intelligence,
-          no fake numbers.
+          SurgeonValue · NPPES live
         </p>
       </div>
     </main>

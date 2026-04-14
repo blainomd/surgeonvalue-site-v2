@@ -192,7 +192,7 @@ export default function LevontiClient({
               marginBottom: 12,
             }}
           >
-            SurgeonValue · Personalized for {fullName.split(" ")[0]}
+            SurgeonValue
           </p>
           <h1
             style={{
@@ -200,28 +200,12 @@ export default function LevontiClient({
               fontWeight: 900,
               letterSpacing: "-2px",
               lineHeight: 1.05,
-              marginBottom: 18,
+              marginBottom: 12,
             }}
           >
-            Today is your day, <br />
-            <span style={{ color: accent }}>
-              Dr. {fullName.split(" ").pop()}
-            </span>
-            .
+            Dr. {fullName.split(" ").pop()}
           </h1>
-          <p
-            style={{
-              fontSize: 17,
-              color: textMuted,
-              maxWidth: 540,
-              margin: "0 auto 8px",
-              lineHeight: 1.6,
-            }}
-          >
-            Everything below is staged for you. Show this page to one Stanford ortho colleague tomorrow,
-            and you walk out with a champion.
-          </p>
-          <p style={{ fontSize: 13, color: "rgba(232,237,242,0.4)", marginTop: 6 }}>
+          <p style={{ fontSize: 13, color: "rgba(232,237,242,0.4)" }}>
             {tomorrowLabel}
           </p>
         </div>
@@ -382,7 +366,7 @@ export default function LevontiClient({
               ? "Running demo…"
               : demoResult
                 ? "Run the demo again →"
-                : "Watch Wonder Bill find the money →"}
+                : "Run the demo →"}
           </button>
 
           {/* Stage progress */}
@@ -546,55 +530,11 @@ export default function LevontiClient({
             </span>
           </div>
           <p style={{ fontSize: 22, fontWeight: 900, letterSpacing: "-0.5px", marginBottom: 12, lineHeight: 1.2 }}>
-            The CMS ACCESS Model is the conversation Stanford ortho needs to have <span style={{ color: accent }}>in the next 30 days</span>.
+            CMS ACCESS Model. Applications close <span style={{ color: "#fbbf24" }}>May 15</span>.
           </p>
-          <p style={{ fontSize: 14, color: textMuted, lineHeight: 1.65, marginBottom: 16 }}>
-            CMS continues to review applications on a rolling basis. Applications must be submitted via the
-            Participant Portal by <strong style={{ color: "#fbbf24" }}>May 15, 2026</strong> for the first performance period. Anything after
-            slides to a January 1, 2027 start. ACCESS is specifically about specialty access for chronic
-            conditions — orthopedics is one of the most relevant specialties on the planet for this model.
+          <p style={{ fontSize: 13, color: textMuted, lineHeight: 1.6, marginBottom: 16 }}>
+            Rolling review. Anything after May 15 starts January 1, 2027. Ortho is in scope.
           </p>
-
-          <div style={{ display: "grid", gap: 12, marginBottom: 18 }}>
-            <div style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: 14, alignItems: "start" }}>
-              <span style={{ fontSize: 18, color: accent, fontWeight: 900 }}>1.</span>
-              <div>
-                <p style={{ fontSize: 14, fontWeight: 800, color: textMain, marginBottom: 2 }}>
-                  Stanford ortho is exactly the specialty ACCESS targets.
-                </p>
-                <p style={{ fontSize: 12, color: textMuted, lineHeight: 1.55 }}>
-                  Chronic OA, longitudinal care, multi-stakeholder coordination, expensive episodic
-                  procedures. The model is built around conditions Stanford ortho already manages
-                  every day.
-                </p>
-              </div>
-            </div>
-            <div style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: 14, alignItems: "start" }}>
-              <span style={{ fontSize: 18, color: accent, fontWeight: 900 }}>2.</span>
-              <div>
-                <p style={{ fontSize: 14, fontWeight: 800, color: textMain, marginBottom: 2 }}>
-                  ACCESS participants need an operational AI layer they don&apos;t have yet.
-                </p>
-                <p style={{ fontSize: 12, color: textMuted, lineHeight: 1.55 }}>
-                  Care coordination time tracking, longitudinal complexity capture, referral management,
-                  bundled-payment readiness. SurgeonValue Pocket already does all four.
-                </p>
-              </div>
-            </div>
-            <div style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: 14, alignItems: "start" }}>
-              <span style={{ fontSize: 18, color: accent, fontWeight: 900 }}>3.</span>
-              <div>
-                <p style={{ fontSize: 14, fontWeight: 800, color: textMain, marginBottom: 2 }}>
-                  You can be the inside champion.
-                </p>
-                <p style={{ fontSize: 12, color: textMuted, lineHeight: 1.55 }}>
-                  Bring this to your division chief or the strategy office before May 1. Stanford applies,
-                  Stanford gets in early, and your name is attached to the operational tooling that
-                  makes it work.
-                </p>
-              </div>
-            </div>
-          </div>
 
           <div
             style={{
@@ -605,13 +545,11 @@ export default function LevontiClient({
             }}
           >
             <p style={{ fontSize: 11, letterSpacing: "0.15em", textTransform: "uppercase", color: accent, fontWeight: 800, marginBottom: 8 }}>
-              The 3-line ask, ready to use
+              Ask script
             </p>
             <p style={{ fontSize: 13, color: textMain, lineHeight: 1.7, fontStyle: "italic" }}>
-              &ldquo;Hey — have you seen the CMS ACCESS Model? Applications close May 15 and ortho is exactly
-              the specialty it&apos;s built for. I&apos;ve been testing an AI tool that handles the operational
-              piece — care coordination capture, longitudinal complexity, bundled-payment readiness.
-              Worth a 15 minute conversation before we miss the window?&rdquo;
+              &ldquo;CMS ACCESS Model closes May 15. Ortho is in scope. I&apos;ve been testing the operational
+              tool. Worth 15 minutes?&rdquo;
             </p>
           </div>
 
@@ -914,10 +852,8 @@ export default function LevontiClient({
             textAlign: "center",
           }}
         >
-          <p style={{ fontSize: 12, color: textMuted, lineHeight: 1.7, maxWidth: 540, margin: "0 auto" }}>
-            Built for one surgeon at one hospital on one day. Real CMS NPPES data. Real Claude
-            backend. Real 2026 Medicare allowables. No fake screenshots, no fake numbers, no fake
-            customers. The product is the demo. Now go.
+          <p style={{ fontSize: 11, color: textMuted, lineHeight: 1.6, maxWidth: 460, margin: "0 auto" }}>
+            Real CMS NPPES data. Real 2026 Medicare allowables.
           </p>
           <p
             style={{

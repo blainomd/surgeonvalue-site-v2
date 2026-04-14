@@ -229,6 +229,7 @@ export default function PocketPage() {
   const [referLoading, setReferLoading] = useState(false);
   const [referResult, setReferResult] = useState<ReferralResult | null>(null);
   const [referCopied, setReferCopied] = useState(false);
+  const [referAdjustOpen, setReferAdjustOpen] = useState(false);
 
   // Share (post drafter) state
   const [shareObservation, setShareObservation] = useState("");
@@ -260,10 +261,45 @@ export default function PocketPage() {
       }
       const params = new URLSearchParams(window.location.search);
 
-      // Preferred destination from ?to=levonti / ?to=derek
-      const toSlug = (params.get("to") || "").toLowerCase().trim();
+      // Preferred destination from ?to=<slug> OR ?to=<10-digit-NPI>
+      // Curated slugs resolve instantly; raw NPIs hydrate from NPPES on the fly
+      const toRaw = (params.get("to") || "").trim();
+      const toSlug = toRaw.toLowerCase();
       if (toSlug && PREFERRED_DESTINATIONS[toSlug]) {
         setPreferredDestination(PREFERRED_DESTINATIONS[toSlug]);
+      } else if (/^\d{10}$/.test(toRaw)) {
+        // Hydrate any NPI on the fly via /api/npi
+        fetch(`/api/npi?npi=${toRaw}`)
+          .then((r) => r.json())
+          .then((data) => {
+            if (data && data.npi && data.provider) {
+              const fullName = `${data.provider.firstName || ""} ${data.provider.lastName || ""}`.trim();
+              const cred = data.provider.credential || "MD";
+              const addr = data.address || {};
+              const practiceLine = [addr.city, addr.state].filter(Boolean).join(", ");
+              setPreferredDestination({
+                slug: toRaw,
+                npi: toRaw,
+                display_name: `Dr. ${fullName}, ${cred}`,
+                practice: practiceLine || "Practice from CMS NPPES",
+                specialty: data.specialty?.label || data.specialty?.description || "Specialist",
+              });
+              // Auto-fill city/state defaults from the surgeon's practice address
+              if (addr.city && !referCity) setReferCity(addr.city);
+              if (addr.state && !referState) setReferState(addr.state);
+            }
+          })
+          .catch(() => {
+            /* silent — Pocket still works without a preferred destination */
+          });
+      }
+
+      // Curated slug auto-defaults — Levonti is at Stanford
+      if (PREFERRED_DESTINATIONS[toSlug]) {
+        if (toSlug === "levonti") {
+          setReferCity("Stanford");
+          setReferState("CA");
+        }
       }
 
       // Optional view override (deep links from /levonti etc.)
@@ -1530,35 +1566,71 @@ export default function PocketPage() {
             <textarea
               value={referContext}
               onChange={(e) => setReferContext(e.target.value)}
-              placeholder="e.g., 60yo M post-op TKA week 2, needs PT 2x/week starting next week, has UnitedHealth"
+              placeholder="60yo M post-op TKA, needs PT 2x/week"
               rows={4}
               style={fieldStyle()}
             />
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginTop: 10 }}>
-              <input
-                value={referSpecialty}
-                onChange={(e) => setReferSpecialty(e.target.value)}
-                placeholder="Specialty (PT, pain, rheum...)"
-                style={{ ...fieldStyle(), fontSize: 12 }}
-              />
-              <input
-                value={referCity}
-                onChange={(e) => setReferCity(e.target.value)}
-                placeholder="City"
-                style={{ ...fieldStyle(), fontSize: 12 }}
-              />
-              <input
-                value={referState}
-                onChange={(e) => setReferState(e.target.value.toUpperCase().slice(0, 2))}
-                placeholder="State"
-                maxLength={2}
-                style={{ ...fieldStyle(), fontSize: 12, textAlign: "center" }}
-              />
-            </div>
-            {referContext && !referResult && (
-              <button onClick={submitRefer} disabled={referLoading} style={primaryBtn(referLoading, accent, bg)}>
-                {referLoading ? "Searching providers + drafting letter…" : "Find matches + draft letter →"}
+            {referContext && !referResult && !referLoading && (
+              <button onClick={submitRefer} style={primaryBtn(false, accent, bg)}>
+                Refer →
               </button>
+            )}
+            {referLoading && (
+              <div
+                style={{
+                  marginTop: 12,
+                  padding: "14px 18px",
+                  background: "rgba(148,209,211,0.06)",
+                  border: "1px solid rgba(148,209,211,0.2)",
+                  borderRadius: 12,
+                  color: textMuted,
+                  fontSize: 13,
+                  textAlign: "center",
+                }}
+              >
+                Matching providers · drafting letter · capturing your codes…
+              </div>
+            )}
+            {/* Adjust — hidden by default, opens to override defaults */}
+            {referContext && !referResult && (
+              <button
+                onClick={() => setReferAdjustOpen(!referAdjustOpen)}
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  color: textMuted,
+                  fontSize: 11,
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  marginTop: 10,
+                  padding: "6px 0",
+                }}
+              >
+                {referAdjustOpen ? "Hide adjust" : "Adjust specialty / location"}
+              </button>
+            )}
+            {referAdjustOpen && (
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginTop: 8 }}>
+                <input
+                  value={referSpecialty}
+                  onChange={(e) => setReferSpecialty(e.target.value)}
+                  placeholder="Specialty"
+                  style={{ ...fieldStyle(), fontSize: 12 }}
+                />
+                <input
+                  value={referCity}
+                  onChange={(e) => setReferCity(e.target.value)}
+                  placeholder="City"
+                  style={{ ...fieldStyle(), fontSize: 12 }}
+                />
+                <input
+                  value={referState}
+                  onChange={(e) => setReferState(e.target.value.toUpperCase().slice(0, 2))}
+                  placeholder="State"
+                  maxLength={2}
+                  style={{ ...fieldStyle(), fontSize: 12, textAlign: "center" }}
+                />
+              </div>
             )}
 
             {referResult && (
