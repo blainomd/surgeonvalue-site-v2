@@ -44,7 +44,7 @@ export default function RootLayout({
             navigator.serviceWorker.register('/sw.js');
           }
         `}</Script>
-        <Script src="https://solvinghealth.com/footer.js" data-brand="surgeonvalue" data-theme="dark" strategy="lazyOnload" />
+        <Script src="https://harnesshealth.ai/footer.js?v=8" data-brand="surgeonvalue" data-theme="dark" strategy="lazyOnload" />
       </body>
     </html>
   );

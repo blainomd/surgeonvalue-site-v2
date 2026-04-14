@@ -38,12 +38,36 @@ const PROFILES: Record<string, ProfileEntry> = {
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const entry = PROFILES[slug];
-  if (!entry) return { title: "SurgeonValue · Profile not found" };
-  return {
-    title: `SurgeonValue · Profile`,
-    description: `Refer a patient through SurgeonValue Pocket.`,
-  };
+  const slugLower = slug.toLowerCase();
+  const entry = PROFILES[slugLower];
+
+  // Vanity slug path
+  if (entry) {
+    return {
+      title: `SurgeonValue · ${entry.practice}`,
+      description: `Refer a patient through SurgeonValue Pocket.`,
+    };
+  }
+
+  // Raw-NPI fallback — hydrate from NPPES so the title reflects a real surgeon
+  if (/^\d{10}$/.test(slug)) {
+    try {
+      const nppes = (await lookupNpi(slug)) as NppesData;
+      const p = nppes?.provider || {};
+      const name = `${p.firstName || ""} ${p.lastName || ""}`.trim();
+      if (name) {
+        const cred = p.credential || "MD";
+        return {
+          title: `${name}, ${cred} · SurgeonValue`,
+          description: `Refer a patient through SurgeonValue Pocket.`,
+        };
+      }
+    } catch {
+      /* fall through to not found */
+    }
+  }
+
+  return { title: "SurgeonValue · Profile not found" };
 }
 
 interface NppesData {
@@ -113,9 +137,9 @@ export default async function ProfilePage({ params }: { params: Promise<{ slug: 
         insurancesAccepted={entry.insurances_accepted || []}
         nextAvailable={entry.next_available || ""}
       />
-      {/* Universal Sage chat bar */}
+      {/* Universal Sage chat bar — canonical source is harnesshealth.ai */}
       <Script
-        src="https://solvinghealth.com/footer.js"
+        src="https://harnesshealth.ai/footer.js?v=8"
         data-brand="surgeonvalue"
         data-theme="dark"
         strategy="lazyOnload"
