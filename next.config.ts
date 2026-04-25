@@ -1,7 +1,20 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  async redirects() {
+    return [
+      {
+        source: "/wonder-bill-demo",
+        destination: "/wonder-bill",
+        permanent: false,
+      },
+      {
+        source: "/demo",
+        destination: "/wonder-bill",
+        permanent: false,
+      },
+    ];
+  },
 };
 
 export default nextConfig;
