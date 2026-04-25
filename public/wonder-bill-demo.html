@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Wonder Bill — SurgeonValue Demo</title>
+  <meta property="og:title" content="Wonder Bill — SurgeonValue" />
+  <meta property="og:description" content="Paste a clinical note. Get your CPT codes in 60 seconds." />
+  <style>
+    :root {
+      --navy:    #1b2a4a;
+      --navy-2:  #142039;
+      --teal:    #0d7377;
+      --teal-2:  #0a5c60;
+      --gold:    #f4c940;
+      --white:   #f0f6ff;
+      --muted:   #8ca0bb;
+      --border:  rgba(240,246,255,0.10);
+      --slide-h: 100dvh;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-size: 16px; }
+    body {
+      font-family: 'Arial', system-ui, sans-serif;
+      background: var(--navy);
+      color: var(--white);
+      overflow: hidden;
+      height: 100dvh;
+    }
+
+    /* ── SLIDES ──────────────────────────────────── */
+    .deck {
+      display: flex;
+      height: 100dvh;
+      width: 500vw;
+      transition: transform 0.55s cubic-bezier(0.77, 0, 0.175, 1);
+    }
+    .slide {
+      width: 100vw;
+      height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 3.5rem 5vw;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* ── NAV ──────────────────────────────────── */
+    .nav {
+      position: fixed;
+      bottom: 2rem;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 0.6rem;
+      align-items: center;
+      z-index: 100;
+    }
+    .nav-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: rgba(240,246,255,0.25);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .nav-dot.active { background: var(--teal); width: 20px; border-radius: 3px; }
+    .nav-btn {
+      background: none; border: none; cursor: pointer;
+      color: var(--muted); font-size: 1.1rem; padding: 0.25rem 0.5rem;
+      transition: color 0.15s;
+    }
+    .nav-btn:hover { color: var(--white); }
+    kbd {
+      font-size: 0.6rem; color: var(--muted);
+      border: 1px solid rgba(240,246,255,0.15);
+      border-radius: 4px; padding: 0.1rem 0.35rem;
+      font-family: monospace; margin-left: 0.6rem;
+    }
+
+    /* ── WORDMARK ──────────────────────────────── */
+    .wordmark {
+      position: fixed; top: 1.5rem; left: 2rem;
+      font-size: 0.7rem; font-weight: 700; letter-spacing: 3px;
+      text-transform: uppercase; color: var(--teal); z-index: 100;
+    }
+    .slide-num {
+      position: fixed; top: 1.5rem; right: 2rem;
+      font-size: 0.65rem; color: var(--muted); z-index: 100;
+      font-family: monospace;
+    }
+
+    /* ── SLIDE 1: PROBLEM ─────────────────────── */
+    .s1-bg {
+      position: absolute; inset: 0;
+      background: radial-gradient(ellipse 80% 60% at 70% 50%, rgba(13,115,119,0.12), transparent 70%);
+    }
+    .s1-label {
+      font-size: 0.65rem; letter-spacing: 3px; text-transform: uppercase;
+      color: var(--teal); margin-bottom: 1.4rem; font-weight: 700;
+    }
+    .s1-headline {
+      font-size: clamp(2rem, 5vw, 3.8rem);
+      font-weight: 700; line-height: 1.12;
+      max-width: 700px; text-align: center;
+    }
+    .s1-headline em { color: var(--gold); font-style: normal; }
+    .s1-sub {
+      margin-top: 1.8rem; max-width: 520px; text-align: center;
+      color: var(--muted); font-size: 1.05rem; line-height: 1.55;
+    }
+    .s1-stat {
+      margin-top: 2.5rem;
+      display: flex; gap: 3rem;
+    }
+    .stat-block { text-align: center; }
+    .stat-num {
+      font-size: clamp(2rem, 4vw, 3rem); font-weight: 700; color: var(--gold);
+    }
+    .stat-label { font-size: 0.72rem; color: var(--muted); letter-spacing: 1px; margin-top: 0.25rem; }
+
+    /* ── SLIDE 2: WONDER BILL ─────────────────── */
+    .s2-bg {
+      position: absolute; inset: 0;
+      background: radial-gradient(ellipse 60% 70% at 30% 60%, rgba(13,115,119,0.14), transparent 65%);
+    }
+    .s2-tag {
+      display: inline-flex; align-items: center; gap: 0.5rem;
+      padding: 0.35rem 0.85rem; border-radius: 999px;
+      border: 1px solid var(--teal); color: var(--teal);
+      font-size: 0.65rem; letter-spacing: 2px; text-transform: uppercase;
+      font-weight: 700; margin-bottom: 1.6rem;
+    }
+    .s2-headline {
+      font-size: clamp(1.8rem, 4.5vw, 3.4rem);
+      font-weight: 700; line-height: 1.1;
+      text-align: center; max-width: 680px;
+    }
+    .s2-headline span { color: var(--teal); }
+    .s2-sub {
+      margin-top: 1.4rem; color: var(--muted);
+      font-size: 1rem; max-width: 500px; text-align: center; line-height: 1.6;
+    }
+    .s2-steps {
+      margin-top: 2.5rem; display: flex; gap: 1rem; align-items: flex-start;
+    }
+    .step {
+      display: flex; flex-direction: column; align-items: center; gap: 0.5rem;
+      max-width: 150px; text-align: center;
+    }
+    .step-circle {
+      width: 44px; height: 44px; border-radius: 50%;
+      background: rgba(13,115,119,0.18); border: 1px solid rgba(13,115,119,0.4);
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700; color: var(--teal); font-size: 1rem;
+    }
+    .step-label { font-size: 0.8rem; color: var(--muted); line-height: 1.4; }
+    .step-arrow { color: var(--border); font-size: 1.2rem; margin-top: 0.8rem; }
+    .s2-install {
+      margin-top: 2rem;
+      padding: 0.6rem 1.2rem; border-radius: 999px;
+      background: rgba(240,246,255,0.06); border: 1px solid rgba(240,246,255,0.12);
+      font-size: 0.75rem; color: var(--muted);
+    }
+    .s2-install strong { color: var(--white); }
+
+    /* ── SLIDE 3: DEMO ────────────────────────── */
+    .s3-layout {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 2rem; width: 100%; max-width: 960px;
+      position: relative; z-index: 1;
+    }
+    .demo-panel {
+      background: rgba(240,246,255,0.04);
+      border: 1px solid var(--border);
+      border-radius: 16px; padding: 1.5rem;
+    }
+    .demo-label {
+      font-size: 0.6rem; letter-spacing: 2.5px; text-transform: uppercase;
+      color: var(--muted); margin-bottom: 1rem; font-weight: 700;
+    }
+    .note-text {
+      font-size: 0.82rem; color: rgba(240,246,255,0.55);
+      line-height: 1.6; font-family: 'Courier New', monospace;
+    }
+    .note-text strong { color: var(--white); }
+    .code-row {
+      display: flex; align-items: flex-start; gap: 0.75rem;
+      padding: 0.7rem 0; border-bottom: 1px solid rgba(240,246,255,0.06);
+    }
+    .code-row:last-child { border-bottom: none; }
+    .cpt-badge {
+      flex-shrink: 0; padding: 0.25rem 0.6rem;
+      background: rgba(13,115,119,0.2); border: 1px solid rgba(13,115,119,0.4);
+      border-radius: 6px; font-size: 0.72rem; font-weight: 700;
+      color: var(--teal); font-family: monospace;
+    }
+    .cpt-badge.new {
+      background: rgba(244,201,64,0.12); border-color: rgba(244,201,64,0.35);
+      color: var(--gold);
+    }
+    .cpt-desc { font-size: 0.8rem; color: var(--muted); line-height: 1.4; }
+    .cpt-desc strong { color: var(--white); }
+    .cpt-value { font-size: 0.72rem; color: var(--gold); font-weight: 700; margin-top: 0.1rem; }
+    .recovered-box {
+      margin-top: 1rem; padding: 0.85rem;
+      background: rgba(13,115,119,0.12); border: 1px solid rgba(13,115,119,0.25);
+      border-radius: 10px; text-align: center;
+    }
+    .recovered-num { font-size: 1.6rem; font-weight: 700; color: var(--gold); }
+    .recovered-label { font-size: 0.65rem; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; margin-top: 0.2rem; }
+    .timer-badge {
+      display: inline-flex; align-items: center; gap: 0.4rem;
+      font-size: 0.7rem; color: var(--teal); margin-top: 0.5rem;
+    }
+    .timer-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--teal);
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.7); }
+    }
+    .s3-above {
+      font-size: 0.65rem; letter-spacing: 2.5px; text-transform: uppercase;
+      color: var(--teal); margin-bottom: 1.4rem; font-weight: 700;
+      position: relative; z-index: 1;
+    }
+
+    /* ── SLIDE 4: THE OS ──────────────────────── */
+    .s4-bg {
+      position: absolute; inset: 0;
+      background: radial-gradient(ellipse 70% 50% at 50% 80%, rgba(13,115,119,0.1), transparent 65%);
+    }
+    .s4-headline {
+      font-size: clamp(1.6rem, 3.5vw, 2.6rem);
+      font-weight: 700; line-height: 1.15; text-align: center; max-width: 600px;
+      position: relative; z-index: 1; margin-bottom: 0.6rem;
+    }
+    .s4-headline span { color: var(--teal); }
+    .s4-sub {
+      font-size: 0.95rem; color: var(--muted); text-align: center; max-width: 460px;
+      position: relative; z-index: 1; margin-bottom: 2rem; line-height: 1.55;
+    }
+    .agents-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      gap: 0.75rem; width: 100%; max-width: 780px;
+      position: relative; z-index: 1;
+    }
+    .agent-card {
+      padding: 0.9rem 1rem;
+      background: rgba(240,246,255,0.04);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .agent-card.highlight {
+      border-color: rgba(13,115,119,0.5);
+      background: rgba(13,115,119,0.08);
+    }
+    .agent-name { font-size: 0.8rem; font-weight: 700; color: var(--white); }
+    .agent-name.featured { color: var(--teal); }
+    .agent-desc { font-size: 0.7rem; color: var(--muted); margin-top: 0.2rem; line-height: 1.35; }
+    .pricing-bar {
+      margin-top: 2rem; display: flex; gap: 1rem;
+      position: relative; z-index: 1;
+    }
+    .price-tier {
+      padding: 0.6rem 1.2rem; border-radius: 999px;
+      border: 1px solid rgba(240,246,255,0.12);
+      font-size: 0.75rem; color: var(--muted); text-align: center;
+    }
+    .price-tier.active {
+      border-color: var(--teal); background: rgba(13,115,119,0.12); color: var(--white);
+    }
+    .price-tier strong { color: var(--gold); display: block; font-size: 1rem; }
+
+    /* ── SLIDE 5: CTA ─────────────────────────── */
+    .s5-bg {
+      position: absolute; inset: 0;
+      background: radial-gradient(ellipse 90% 60% at 50% 50%, rgba(13,115,119,0.18), transparent 65%);
+    }
+    .s5-headline {
+      font-size: clamp(2rem, 5vw, 3.6rem);
+      font-weight: 700; line-height: 1.1; text-align: center;
+      position: relative; z-index: 1; max-width: 640px;
+    }
+    .s5-headline span { color: var(--teal); }
+    .s5-sub {
+      font-size: 1rem; color: var(--muted); text-align: center;
+      max-width: 440px; line-height: 1.6; margin-top: 1rem;
+      position: relative; z-index: 1;
+    }
+    .s5-cards {
+      margin-top: 2.5rem; display: flex; gap: 1.2rem;
+      position: relative; z-index: 1;
+    }
+    .s5-card {
+      padding: 1.4rem 1.6rem; border-radius: 16px;
+      border: 1px solid var(--border);
+      background: rgba(240,246,255,0.04);
+      min-width: 200px; text-align: center;
+    }
+    .s5-card.primary {
+      border-color: var(--teal); background: rgba(13,115,119,0.12);
+    }
+    .s5-card-icon { font-size: 1.6rem; margin-bottom: 0.5rem; }
+    .s5-card-title { font-weight: 700; font-size: 0.9rem; }
+    .s5-card-desc { font-size: 0.75rem; color: var(--muted); margin-top: 0.25rem; line-height: 1.4; }
+    .s5-url {
+      margin-top: 0.6rem; font-size: 0.7rem; color: var(--teal);
+      font-family: monospace; letter-spacing: 0.5px;
+    }
+    .s5-note {
+      margin-top: 2rem; font-size: 0.72rem; color: var(--muted);
+      position: relative; z-index: 1;
+      background: rgba(240,246,255,0.04);
+      border: 1px solid var(--border); border-radius: 8px;
+      padding: 0.6rem 1rem;
+    }
+    .s5-note strong { color: var(--white); }
+
+    /* ── ENTRANCE ANIMATIONS ──────────────────── */
+    .slide .anim { opacity: 0; transform: translateY(24px); transition: opacity 0.5s, transform 0.5s; }
+    .slide.active .anim { opacity: 1; transform: translateY(0); }
+    .slide.active .anim:nth-child(1) { transition-delay: 0.05s; }
+    .slide.active .anim:nth-child(2) { transition-delay: 0.15s; }
+    .slide.active .anim:nth-child(3) { transition-delay: 0.25s; }
+    .slide.active .anim:nth-child(4) { transition-delay: 0.35s; }
+    .slide.active .anim:nth-child(5) { transition-delay: 0.42s; }
+    .slide.active .anim:nth-child(6) { transition-delay: 0.48s; }
+    .slide.active .s3-layout { opacity: 1; transform: translateY(0); }
+    .slide .s3-layout { opacity: 0; transform: translateY(24px); transition: opacity 0.5s 0.1s, transform 0.5s 0.1s; }
+    .slide.active .agents-grid { opacity: 1; transform: translateY(0); }
+    .slide .agents-grid { opacity: 0; transform: translateY(24px); transition: opacity 0.5s 0.3s, transform 0.5s 0.3s; }
+  </style>
+</head>
+<body>
+
+<div class="wordmark">SurgeonValue</div>
+<div class="slide-num" id="slideNum">1 / 5</div>
+
+<div class="deck" id="deck">
+
+  <!-- ── SLIDE 1: THE PROBLEM ── -->
+  <div class="slide active" id="slide-0">
+    <div class="s1-bg"></div>
+    <div class="s1-label anim">The Problem</div>
+    <h1 class="s1-headline anim">
+      She knows the diagnosis.<br>
+      She doesn't know she missed<br>
+      <em>three billable codes.</em>
+    </h1>
+    <p class="s1-sub anim">
+      Orthopedic surgeons leave $60,000–$200,000 on the table every year.
+      Not from bad medicine. From not having 60 seconds between cases.
+    </p>
+    <div class="s1-stat anim">
+      <div class="stat-block">
+        <div class="stat-num">40×</div>
+        <div class="stat-label">per day she wonders<br>"can I bill for this?"</div>
+      </div>
+      <div class="stat-block">
+        <div class="stat-num">$147K</div>
+        <div class="stat-label">average missed revenue<br>per orthopedic surgeon</div>
+      </div>
+      <div class="stat-block">
+        <div class="stat-num">0 min</div>
+        <div class="stat-label">available between<br>cases to research it</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── SLIDE 2: WONDER BILL ── -->
+  <div class="slide" id="slide-1">
+    <div class="s2-bg"></div>
+    <div class="s2-tag anim">
+      <span>●</span> Introducing
+    </div>
+    <h1 class="s2-headline anim">
+      <span>Wonder Bill.</span><br>
+      Paste your note.<br>Get your codes in 60 seconds.
+    </h1>
+    <p class="s2-sub anim">
+      No EMR integration. No login. No IT ticket. Install from Safari in five seconds
+      and run it between any two cases.
+    </p>
+    <div class="s2-steps anim">
+      <div class="step">
+        <div class="step-circle">1</div>
+        <div class="step-label">Dictate or paste your clinical note</div>
+      </div>
+      <div class="step-arrow">→</div>
+      <div class="step">
+        <div class="step-circle">2</div>
+        <div class="step-label">Wonder Bill reads it — 60 seconds</div>
+      </div>
+      <div class="step-arrow">→</div>
+      <div class="step">
+        <div class="step-circle">3</div>
+        <div class="step-label">Get CPT codes + rationale, ready to bill</div>
+      </div>
+    </div>
+    <div class="s2-install anim">
+      <strong>Free to try.</strong> &nbsp;Install Pocket at surgeonvalue.com/pocket — no account required.
+    </div>
+  </div>
+
+  <!-- ── SLIDE 3: DEMO ── -->
+  <div class="slide" id="slide-2">
+    <div class="s1-bg"></div>
+    <div class="s3-above">Live Example — Post-Op Knee Note</div>
+    <div class="s3-layout">
+      <div class="demo-panel">
+        <div class="demo-label">Clinical Note</div>
+        <p class="note-text">
+          <strong>Patient:</strong> 58F, 6-week post-op TKA<br><br>
+          ROM improving — 0–115°. Mild effusion, no warmth. Wound healed.
+          PT compliance good — 3x/week. Pain 2/10 at rest, 5/10 with stairs.
+          Discussed activity progression. <strong>Ordered 4 more PT sessions.</strong>
+          Reviewed PROMIS function scores (baseline vs. current). Return 6 weeks.
+        </p>
+      </div>
+      <div class="demo-panel">
+        <div class="demo-label">Wonder Bill Output</div>
+        <div class="code-row">
+          <div>
+            <div class="cpt-badge">99213</div>
+          </div>
+          <div>
+            <div class="cpt-desc"><strong>Office visit, moderate complexity</strong></div>
+            <div class="cpt-desc">6-week post-op with data review + PT order</div>
+            <div class="cpt-value">$116</div>
+          </div>
+        </div>
+        <div class="code-row">
+          <div>
+            <div class="cpt-badge">97110</div>
+          </div>
+          <div>
+            <div class="cpt-desc"><strong>Therapeutic exercise order</strong></div>
+            <div class="cpt-desc">Supervised PT progression documented</div>
+            <div class="cpt-value">$68</div>
+          </div>
+        </div>
+        <div class="code-row">
+          <div>
+            <div class="cpt-badge new">G0023 ✦</div>
+          </div>
+          <div>
+            <div class="cpt-desc"><strong>PROMIS functional assessment</strong> — new</div>
+            <div class="cpt-desc">Baseline vs. current scores qualify</div>
+            <div class="cpt-value">$128</div>
+          </div>
+        </div>
+        <div class="recovered-box">
+          <div class="recovered-num">$312</div>
+          <div class="recovered-label">recovered this encounter</div>
+          <div class="timer-badge">
+            <div class="timer-dot"></div>
+            completed in 47 seconds
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── SLIDE 4: THE OS ── -->
+  <div class="slide" id="slide-3">
+    <div class="s4-bg"></div>
+    <h1 class="s4-headline anim">Wonder Bill is the front door.<br><span>Nine agents live behind it.</span></h1>
+    <p class="s4-sub anim">Start with Wonder Bill, free. Add agents as your practice needs them. No new software to learn — it runs alongside your current workflow.</p>
+    <div class="agents-grid">
+      <div class="agent-card highlight">
+        <div class="agent-name featured">Wonder Bill ✦</div>
+        <div class="agent-desc">CPT codes from any clinical note. 60 seconds. Start here.</div>
+      </div>
+      <div class="agent-card highlight">
+        <div class="agent-name featured">Prior Auth</div>
+        <div class="agent-desc">Paste note → authorization letter drafted in 90 seconds.</div>
+      </div>
+      <div class="agent-card">
+        <div class="agent-name">Referral Writer</div>
+        <div class="agent-desc">Structured, insurance-ready referrals from your dictation.</div>
+      </div>
+      <div class="agent-card">
+        <div class="agent-name">RTM Monitor</div>
+        <div class="agent-desc">Remote therapeutic monitoring codes — auto-flagged eligible patients.</div>
+      </div>
+      <div class="agent-card">
+        <div class="agent-name">Voice PROM</div>
+        <div class="agent-desc">Patient-reported outcomes captured by voice, mapped to PROMIS.</div>
+      </div>
+      <div class="agent-card">
+        <div class="agent-name">NCCI Validator</div>
+        <div class="agent-desc">Catch unbundling errors before claims submission.</div>
+      </div>
+      <div class="agent-card">
+        <div class="agent-name">CCM Tracker</div>
+        <div class="agent-desc">Chronic care management minutes — auto-documented per encounter.</div>
+      </div>
+      <div class="agent-card">
+        <div class="agent-name">Discharge Writer</div>
+        <div class="agent-desc">Patient instructions drafted in plain language, your voice.</div>
+      </div>
+      <div class="agent-card">
+        <div class="agent-name">Virtual Front Door</div>
+        <div class="agent-desc">Surgeon profile that replaces a $500K portal — for $299/month.</div>
+      </div>
+    </div>
+    <div class="pricing-bar anim">
+      <div class="price-tier active"><strong>Free</strong> Wonder Bill only</div>
+      <div class="price-tier"><strong>$199<span style="font-size:.7em">/mo</span></strong> Core — 5 agents</div>
+      <div class="price-tier"><strong>$299<span style="font-size:.7em">/mo</span></strong> Pro — all 9 agents</div>
+      <div class="price-tier"><strong>+$20</strong> per encounter captured</div>
+    </div>
+  </div>
+
+  <!-- ── SLIDE 5: CTA ── -->
+  <div class="slide" id="slide-4">
+    <div class="s5-bg"></div>
+    <h1 class="s5-headline anim">
+      Your Epic workflow,<br><span>unchanged.</span><br>
+      Wonder Bill runs alongside it.
+    </h1>
+    <p class="s5-sub anim">
+      No integration. No IT approval. No contract.
+      Install Pocket from Safari in five seconds and run it on your next case.
+    </p>
+    <div class="s5-cards anim">
+      <div class="s5-card primary">
+        <div class="s5-card-icon">⚡</div>
+        <div class="s5-card-title">Install Pocket</div>
+        <div class="s5-card-desc">Safari → Add to Home Screen. Runs in parallel with Epic. Free forever for Wonder Bill.</div>
+        <div class="s5-url">surgeonvalue.com/pocket</div>
+      </div>
+      <div class="s5-card">
+        <div class="s5-card-icon">📋</div>
+        <div class="s5-card-title">Book a Demo</div>
+        <div class="s5-card-desc">30 minutes. See all 9 agents. We'll run your actual note through Wonder Bill live.</div>
+        <div class="s5-url">surgeonvalue.com/demo</div>
+      </div>
+      <div class="s5-card">
+        <div class="s5-card-icon">📊</div>
+        <div class="s5-card-title">Revenue Audit</div>
+        <div class="s5-card-desc">Share 10 recent notes. We'll show you exactly what you left on the table last month.</div>
+        <div class="s5-url">surgeonvalue.com/audit</div>
+      </div>
+    </div>
+    <div class="s5-note anim">
+      <strong>For Stanford Epic users:</strong> Wonder Bill requires zero Epic integration. Run it from your phone or any browser. Your workflow, your data — unchanged.
+    </div>
+  </div>
+
+</div><!-- /deck -->
+
+<!-- NAV -->
+<div class="nav">
+  <button class="nav-btn" id="prevBtn" onclick="navigate(-1)">←</button>
+  <div id="dots"></div>
+  <button class="nav-btn" id="nextBtn" onclick="navigate(1)">→</button>
+  <kbd>← →</kbd>
+</div>
+
+<script>
+  const TOTAL = 5;
+  let cur = 0;
+
+  const deck = document.getElementById('deck');
+  const slideNum = document.getElementById('slideNum');
+  const dotsEl = document.getElementById('dots');
+
+  // Build dots
+  for (let i = 0; i < TOTAL; i++) {
+    const d = document.createElement('div');
+    d.className = 'nav-dot' + (i === 0 ? ' active' : '');
+    d.onclick = () => goTo(i);
+    dotsEl.appendChild(d);
+  }
+
+  function goTo(n) {
+    if (n < 0 || n >= TOTAL) return;
+    document.getElementById('slide-' + cur).classList.remove('active');
+    cur = n;
+    deck.style.transform = 'translateX(-' + (cur * 100) + 'vw)';
+    document.getElementById('slide-' + cur).classList.add('active');
+    slideNum.textContent = (cur + 1) + ' / ' + TOTAL;
+    document.querySelectorAll('.nav-dot').forEach((d, i) => {
+      d.classList.toggle('active', i === cur);
+    });
+  }
+
+  function navigate(dir) { goTo(cur + dir); }
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') navigate(1);
+    if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')   navigate(-1);
+  });
+
+  // Touch / swipe
+  let tx = 0;
+  document.addEventListener('touchstart', e => { tx = e.touches[0].clientX; });
+  document.addEventListener('touchend',   e => {
+    const dx = e.changedTouches[0].clientX - tx;
+    if (Math.abs(dx) > 40) navigate(dx < 0 ? 1 : -1);
+  });
+</script>
+<script src="https://harnesshealth.ai/footer.js" defer></script>
+</body>
+</html>
